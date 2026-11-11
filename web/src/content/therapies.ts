@@ -26,8 +26,8 @@ export const therapies: Therapy[] = [
     },
     name: { es: "Terapia manual", ca: "Teràpia manual" },
     summary: {
-      es: "Terapia manual en Mataró para devolver movimiento donde el dolor lo ha cerrado. Pol Carmona, en Via Sèrgia 32.",
-      ca: "Teràpia manual a Mataró per tornar moviment on el dolor l'ha tancat. Pol Carmona, a Via Sèrgia 32.",
+      es: "Técnicas manuales orientadas a mejorar la movilidad, reducir el dolor y recuperar la funcionalidad.",
+      ca: "Tècniques manuals orientades a millorar la mobilitat, reduir el dolor i recuperar la funcionalitat.",
     },
     paragraphs: {
       es: [
@@ -100,8 +100,8 @@ export const therapies: Therapy[] = [
     },
     name: { es: "Punción seca", ca: "Punció seca" },
     summary: {
-      es: "Punción seca en Mataró para puntos musculares que no sueltan. Aguja fina, explicación previa y criterio clínico.",
-      ca: "Punció seca a Mataró per a punts musculars que no deixen anar. Agulla fina, explicació prèvia i criteri clínic.",
+      es: "Técnica invasiva utilizada en el tratamiento de determinadas disfunciones musculares.",
+      ca: "Tècnica invasiva utilitzada en el tractament de determinades disfuncions musculars.",
     },
     paragraphs: {
       es: [
@@ -174,8 +174,8 @@ export const therapies: Therapy[] = [
     },
     name: { es: "Neuromodulación", ca: "Neuromodulació" },
     summary: {
-      es: "Neuromodulación percutánea en Mataró: aguja fina y corriente dosificada para el dolor y la activación muscular.",
-      ca: "Neuromodulació percutània a Mataró: agulla fina i corrent dosificat per al dolor i l'activació muscular.",
+      es: "Aplicación de técnicas de estimulación percutánea del sistema nervioso con distintos objetivos terapéuticos.",
+      ca: "Aplicació de tècniques d'estimulació percutània del sistema nerviós amb diferents objectius terapèutics.",
     },
     paragraphs: {
       es: [
@@ -248,8 +248,8 @@ export const therapies: Therapy[] = [
     },
     name: { es: "Ejercicio terapéutico", ca: "Exercici terapèutic" },
     summary: {
-      es: "Ejercicio terapéutico en Mataró para que el alivio dure: fuerza, control y una dosis que cabe en tu semana.",
-      ca: "Exercici terapèutic a Mataró perquè l'alleujament duri: força, control i una dosi que cap a la teva setmana.",
+      es: "Ejercicios individualizados para recuperar fuerza, movilidad, estabilidad y control motor.",
+      ca: "Exercicis individualitzats per recuperar força, mobilitat, estabilitat i control motor.",
     },
     paragraphs: {
       es: [
@@ -322,8 +322,8 @@ export const therapies: Therapy[] = [
     },
     name: { es: "Readaptación deportiva", ca: "Readaptació esportiva" },
     summary: {
-      es: "Readaptación deportiva en Mataró: el puente entre ya no me duele y he vuelto a mi deporte, sin calendario mágico.",
-      ca: "Readaptació esportiva a Mataró: el pont entre ja no em fa mal i he tornat al meu esport, sense calendari màgic.",
+      es: "Trabajo progresivo para recuperar las capacidades físicas y volver a la actividad deportiva con garantías.",
+      ca: "Treball progressiu per recuperar les capacitats físiques i tornar a l'activitat esportiva amb garanties.",
     },
     paragraphs: {
       es: [
@@ -387,6 +387,16 @@ export const therapies: Therapy[] = [
     },
   },
 ];
+
+const displayOrder = ["manual", "exercise", "dry", "neuro", "return"];
+
+export function orderedTherapies() {
+  return displayOrder.map((id) => {
+    const therapy = therapies.find((item) => item.id === id);
+    if (!therapy) throw new Error(`Missing therapy ${id}`);
+    return therapy;
+  });
+}
 
 export function therapyBySlug(locale: Locale, slug: string) {
   return therapies.find((therapy) => therapy.slug[locale] === slug);

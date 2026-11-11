@@ -1,0 +1,13 @@
+RewriteEngine On
+
+RewriteRule ^ca/?$ / [R=301,L]
+RewriteRule ^admin/?$ /admin.php [END]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+RewriteRule ^(.+?)/?$ /$1.html [L]
+
+<FilesMatch "^(config\.(local|sample)\.php|schema\.sql|lib\.php)$">
+  Require all denied
+</FilesMatch>

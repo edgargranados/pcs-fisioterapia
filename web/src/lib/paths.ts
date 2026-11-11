@@ -1,7 +1,7 @@
 import type { Locale } from "@/lib/locale";
 
 export function homePath(locale: Locale) {
-  return locale === "ca" ? "/ca" : "/";
+  return locale === "ca" ? "/" : "/es";
 }
 
 export function mataroPath(locale: Locale) {

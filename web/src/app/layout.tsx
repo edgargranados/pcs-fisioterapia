@@ -18,11 +18,11 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   metadataBase: new URL("https://pcsfisioterapia.com"),
   title: {
-    default: "Fisioterapeuta en Mataró | Pol Carmona",
+    default: "Fisioteràpia esportiva a Mataró | Pol Carmona",
     template: "%s · PCS Fisioterapia",
   },
   description:
-    "Fisioterapia deportiva en Mataró. Pol Carmona atiende en Via Sèrgia 32: terapia manual, punción seca, neuromodulación, ejercicio terapéutico y readaptación.",
+    "Fisioteràpia esportiva i readaptació funcional a Mataró. Pol Carmona, Via Sèrgia 32: teràpia manual, exercici terapèutic, punció seca, neuromodulació i readaptació.",
   applicationName: "PCS Fisioterapia",
   authors: [{ name: "Pol Carmona Santandreu" }],
   creator: "Pol Carmona Santandreu",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${outfit.variable} ${fraunces.variable} h-full antialiased`}>
+    <html lang="ca" className={`${outfit.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="min-h-full bg-background text-foreground">{children}</body>
     </html>
   );

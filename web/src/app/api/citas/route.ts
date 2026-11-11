@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { isHoneypot, parseLead } from "@/lib/leads";
 import { clientIp, rateLimit, sameOrigin } from "@/lib/rate-limit";
+import { whatsappLink } from "@/lib/whatsapp";
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) {
@@ -42,5 +43,8 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "server" }, { status: 500 });
   }
 
-  return Response.json({ ok: true });
+  return Response.json({
+    ok: true,
+    whatsapp: whatsappLink(parsed.lead.locale, parsed.lead.name),
+  });
 }

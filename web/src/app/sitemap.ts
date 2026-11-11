@@ -6,7 +6,7 @@ import { absoluteUrl } from "@/lib/paths";
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries: { path: string; priority: number }[] = [
     { path: "/", priority: 1 },
-    { path: "/ca", priority: 1 },
+    { path: "/es", priority: 1 },
     { path: "/fisioterapia-mataro", priority: 0.9 },
     { path: "/ca/fisioterapia-mataro", priority: 0.9 },
     { path: "/cita", priority: 0.7 },

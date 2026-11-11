@@ -6,7 +6,7 @@ import { FaqList } from "@/components/faq-list";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import type { Therapy } from "@/content/therapies";
-import { therapies } from "@/content/therapies";
+import { orderedTherapies } from "@/content/therapies";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
 import { homePath, therapyPath } from "@/lib/paths";
@@ -87,7 +87,7 @@ export function TherapyView({ locale, therapy }: { locale: Locale; therapy: Ther
         <section className="mx-auto w-full max-w-6xl px-5 py-10">
           <h2 className="font-serif text-2xl">{copy.otherTherapies}</h2>
           <ul className="mt-4 flex flex-wrap gap-2">
-            {therapies
+            {orderedTherapies()
               .filter((item) => item.id !== therapy.id)
               .map((item) => (
                 <li key={item.id}>

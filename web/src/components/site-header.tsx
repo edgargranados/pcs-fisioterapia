@@ -1,23 +1,25 @@
 import Link from "next/link";
 import { MobileMenu } from "@/components/mobile-menu";
-import { therapies } from "@/content/therapies";
+import { orderedTherapies } from "@/content/therapies";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
-import { bookPath, homePath, mataroPath, therapyPath, zonesPath } from "@/lib/paths";
+import { homePath, therapyPath, zonesPath } from "@/lib/paths";
 
 export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternateHref: string }) {
   const copy = ui[locale];
+  const home = homePath(locale);
   const links = [
-    { href: `${homePath(locale)}#terapias`, label: copy.therapies },
-    { href: mataroPath(locale), label: copy.consult },
+    { href: `${home}#serveis`, label: copy.therapies },
+    { href: `${home}#proces`, label: copy.processNav },
+    { href: `${home}#pacients`, label: copy.audienceNav },
+    { href: `${home}#pol`, label: copy.about },
     { href: zonesPath(locale), label: copy.zones },
-    { href: `${homePath(locale)}#pol`, label: copy.about },
   ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex h-[4.5rem] w-full max-w-6xl items-center justify-between gap-4 px-5">
-        <Link href={homePath(locale)} className="flex items-center gap-3">
+        <Link href={home} className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-xl bg-primary font-serif text-[13px] tracking-wide text-primary-foreground">
             PCS
           </span>
@@ -35,7 +37,10 @@ export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternat
               {copy.therapies}
             </summary>
             <div className="absolute left-0 top-[calc(100%+0.4rem)] z-20 w-72 rounded-2xl border border-border bg-card p-2 shadow-lg">
-              {therapies.map((therapy) => (
+              <Link href={`${home}#serveis`} className="block rounded-xl px-3 py-2.5 font-medium hover:bg-accent">
+                {copy.servicesTitle}
+              </Link>
+              {orderedTherapies().map((therapy) => (
                 <Link
                   key={therapy.id}
                   href={therapyPath(locale, therapy.slug[locale])}
@@ -46,14 +51,14 @@ export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternat
               ))}
             </div>
           </details>
-          <Link href={mataroPath(locale)} className="hover:text-primary">
-            {copy.consult}
+          <Link href={`${home}#proces`} className="hover:text-primary">
+            {copy.processNav}
+          </Link>
+          <Link href={`${home}#pol`} className="hover:text-primary">
+            {copy.about}
           </Link>
           <Link href={zonesPath(locale)} className="hover:text-primary">
             {copy.zones}
-          </Link>
-          <Link href={`${homePath(locale)}#pol`} className="hover:text-primary">
-            {copy.about}
           </Link>
         </nav>
 
@@ -66,12 +71,12 @@ export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternat
           >
             {copy.langLabel}
           </Link>
-          <Link href={bookPath(locale)} className="hidden h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground sm:inline-flex">
+          <Link href={`${home}#cita`} className="hidden h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground sm:inline-flex">
             {copy.book}
           </Link>
           <MobileMenu
             links={links}
-            cta={{ href: bookPath(locale), label: copy.book }}
+            cta={{ href: `${home}#cita`, label: copy.book }}
             lang={{ href: alternateHref, label: copy.langLabel, aria: copy.langAria }}
             openLabel={copy.menu}
             closeLabel={copy.close}

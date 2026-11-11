@@ -31,6 +31,7 @@ export function AppointmentForm({
   const [error, setError] = useState<string>("");
   const [savedName, setSavedName] = useState("");
   const [savedPhone, setSavedPhone] = useState("");
+  const [whatsappHref, setWhatsappHref] = useState("");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,12 +47,16 @@ export function AppointmentForm({
     setError("");
 
     try {
-      const response = await fetch("/api/citas", {
+      const response = await fetch(process.env.NEXT_PUBLIC_LEAD_API || "/api/citas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, email, company, consent, locale, page }),
       });
-      const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        whatsapp?: string;
+      } | null;
       if (!response.ok || !payload?.ok) {
         const code = payload?.error ?? "server";
         const known = code in copy.errors ? copy.errors[code as keyof typeof copy.errors] : copy.errors.server;
@@ -61,6 +66,7 @@ export function AppointmentForm({
       }
       setSavedName(name.trim());
       setSavedPhone(phone.trim());
+      setWhatsappHref(safeWhatsapp(payload?.whatsapp));
       setStatus("success");
       requestAnimationFrame(() => successRef.current?.focus());
     } catch {
@@ -72,9 +78,9 @@ export function AppointmentForm({
   if (status === "success") {
     const safeName = savedName.replace(/[\r\n]/g, " ").slice(0, 80);
     const message = copy.whatsappMessage(safeName);
-    const href = whatsappNumber
-      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
-      : "";
+    const href =
+      whatsappHref ||
+      (whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}` : "");
 
     return (
       <div className="rounded-[1.6rem] border border-border bg-card p-6 sm:p-8" role="status">
@@ -178,6 +184,17 @@ export function AppointmentForm({
       </div>
     </form>
   );
+}
+
+function safeWhatsapp(value: unknown) {
+  if (typeof value !== "string" || value.length > 600) return "";
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.hostname !== "wa.me") return "";
+    return url.toString();
+  } catch {
+    return "";
+  }
 }
 
 function WhatsAppMark() {

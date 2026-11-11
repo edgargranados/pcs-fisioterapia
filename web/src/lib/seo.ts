@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { therapies } from "@/content/therapies";
+import { orderedTherapies } from "@/content/therapies";
 import { towns } from "@/content/towns";
 import type { Locale } from "@/lib/locale";
 import { absoluteUrl, therapyPath } from "@/lib/paths";
@@ -12,9 +12,10 @@ type PageMetaInput = {
   path: string;
   esPath: string;
   caPath: string;
+  xDefault?: string;
 };
 
-export function pageMeta({ locale, title, description, path, esPath, caPath }: PageMetaInput): Metadata {
+export function pageMeta({ locale, title, description, path, esPath, caPath, xDefault }: PageMetaInput): Metadata {
   return {
     title,
     description,
@@ -23,7 +24,7 @@ export function pageMeta({ locale, title, description, path, esPath, caPath }: P
       languages: {
         es: absoluteUrl(esPath),
         ca: absoluteUrl(caPath),
-        "x-default": absoluteUrl(esPath),
+        "x-default": absoluteUrl(xDefault ?? caPath),
       },
     },
     openGraph: {
@@ -51,8 +52,8 @@ export function pageMeta({ locale, title, description, path, esPath, caPath }: P
 export function businessJsonLd(locale: Locale) {
   const description =
     locale === "ca"
-      ? "Fisioteràpia esportiva a Mataró. Pol Carmona: teràpia manual, punció seca, neuromodulació, exercici terapèutic i readaptació esportiva."
-      : "Fisioterapia deportiva en Mataró. Pol Carmona: terapia manual, punción seca, neuromodulación, ejercicio terapéutico y readaptación deportiva.";
+      ? "Fisioteràpia esportiva i readaptació funcional a Mataró. Pol Carmona: teràpia manual, exercici terapèutic, punció seca, neuromodulació i readaptació esportiva."
+      : "Fisioterapia deportiva y readaptación funcional en Mataró. Pol Carmona: terapia manual, ejercicio terapéutico, punción seca, neuromodulación y readaptación deportiva.";
 
   return {
     "@context": "https://schema.org",
@@ -78,7 +79,7 @@ export function businessJsonLd(locale: Locale) {
     },
     hasMap: clinic.maps,
     areaServed: [{ "@type": "City", name: "Mataró" }, ...towns.map((town) => ({ "@type": "City", name: town.name }))],
-    availableService: therapies.map((therapy) => ({
+    availableService: orderedTherapies().map((therapy) => ({
       "@type": "MedicalTherapy",
       name: therapy.name[locale],
       url: absoluteUrl(therapyPath(locale, therapy.slug[locale])),

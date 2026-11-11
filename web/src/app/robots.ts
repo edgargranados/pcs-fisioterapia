@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/api/"],
+      disallow: ["/admin", "/admin.php", "/api/", "/config.local.php", "/config.sample.php"],
     },
     sitemap: "https://pcsfisioterapia.com/sitemap.xml",
     host: "https://pcsfisioterapia.com",

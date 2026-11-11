@@ -4,7 +4,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { FaqList } from "@/components/faq-list";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
-import { therapies } from "@/content/therapies";
+import { orderedTherapies } from "@/content/therapies";
 import { townBySlug, type Town } from "@/content/towns";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
@@ -92,7 +92,7 @@ export function TownView({ locale, town }: { locale: Locale; town: Town }) {
         <section className="mx-auto w-full max-w-6xl px-5 py-6">
           <h2 className="font-serif text-3xl">{copy.therapies}</h2>
           <ul className="mt-4 flex flex-wrap gap-2">
-            {therapies.map((therapy) => (
+            {orderedTherapies().map((therapy) => (
               <li key={therapy.id}>
                 <Link href={therapyPath(locale, therapy.slug[locale])} className="inline-flex rounded-full border border-border px-4 py-2 text-sm hover:bg-accent">
                   {therapy.name[locale]}

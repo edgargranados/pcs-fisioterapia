@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
-import { bookPath } from "@/lib/paths";
+import { homePath } from "@/lib/paths";
 import { businessJsonLd } from "@/lib/seo";
 
 export function SiteShell({
@@ -22,6 +22,11 @@ export function SiteShell({
 
   return (
     <div lang={locale} className="flex min-h-full flex-col bg-background text-foreground">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.lang=${JSON.stringify(locale)}`,
+        }}
+      />
       <JsonLd data={businessJsonLd(locale)} />
       <a
         href="#contenido"
@@ -37,7 +42,7 @@ export function SiteShell({
       {hideMobileCta ? null : (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
           <Link
-            href={bookPath(locale)}
+            href={`${homePath(locale)}#cita`}
             className="flex h-12 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground"
           >
             {copy.book}

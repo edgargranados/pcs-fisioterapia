@@ -8,3 +8,14 @@ export function getWhatsappNumber() {
   if (!/^34[6-9]\d{8}$/.test(digits)) return "";
   return digits;
 }
+
+export function whatsappLink(locale: "es" | "ca", name: string) {
+  const number = getWhatsappNumber();
+  if (!number) return "";
+  const safe = name.replace(/[\r\n]/g, " ").slice(0, 80);
+  const text =
+    locale === "ca"
+      ? `Hola Pol, sóc ${safe}. Acabo de demanar hora a pcsfisioterapia.com.`
+      : `Hola Pol, soy ${safe}. Acabo de pedir cita en pcsfisioterapia.com.`;
+  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+}

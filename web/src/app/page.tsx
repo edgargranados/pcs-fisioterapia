@@ -2,15 +2,16 @@ import { HomePage } from "@/components/home-page";
 import { pageMeta } from "@/lib/seo";
 
 export const metadata = pageMeta({
-  locale: "es",
-  title: "Fisioterapeuta en Mataró",
+  locale: "ca",
+  title: "Fisioteràpia esportiva a Mataró",
   description:
-    "Consulta de fisioterapia deportiva en Via Sèrgia 32, Mataró. Pol Carmona: terapia manual, punción seca, neuromodulación y readaptación. Pide cita.",
+    "Fisioteràpia esportiva i readaptació funcional. Pol Carmona t'ajuda a recuperar-te de les lesions, millorar la mobilitat i tornar a l'esport. Via Sèrgia 32, Mataró.",
   path: "/",
-  esPath: "/",
-  caPath: "/ca",
+  esPath: "/es",
+  caPath: "/",
+  xDefault: "/",
 });
 
 export default function Page() {
-  return <HomePage locale="es" />;
+  return <HomePage locale="ca" />;
 }

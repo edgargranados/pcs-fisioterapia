@@ -16,6 +16,9 @@
 # next.js
 /.next/
 /out/
+/ovh-dist/
+/.ovh-stash/
+/ovh/config.local.php
 
 # production
 /build

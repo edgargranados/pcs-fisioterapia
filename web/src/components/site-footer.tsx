@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { therapies } from "@/content/therapies";
+import { orderedTherapies } from "@/content/therapies";
 import { towns } from "@/content/towns";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
@@ -16,15 +16,13 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           <p className="font-serif text-3xl tracking-tight">{clinic.brand}</p>
           <p className="mt-3 max-w-xs text-sm leading-6 text-[#f6f3ec]/75">{copy.footerNote}</p>
           <address className="mt-6 text-sm leading-7 not-italic">
-            {clinic.fullName}
+            {clinic.person}
+            <br />
+            {clinic.brand}
+            <br />
+            {copy.factAddressValue}
             <br />
             {copy.college}
-            <br />
-            {clinic.place}
-            <br />
-            {clinic.street}
-            <br />
-            {clinic.postalCode} {clinic.city}
           </address>
           <a href={clinic.maps} className="mt-4 inline-block text-sm underline underline-offset-4" target="_blank" rel="noopener noreferrer">
             {copy.howToGet}
@@ -33,7 +31,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
         <div className="md:col-span-3">
           <p className="text-xs uppercase tracking-[0.16em] text-[#f6f3ec]/60">{copy.therapies}</p>
           <ul className="mt-4 space-y-2 text-sm">
-            {therapies.map((therapy) => (
+            {orderedTherapies().map((therapy) => (
               <li key={therapy.id}>
                 <Link href={therapyPath(locale, therapy.slug[locale])} className="hover:underline">
                   {therapy.name[locale]}

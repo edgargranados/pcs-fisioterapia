@@ -27,11 +27,13 @@ export default function Page() {
           <h1 className="mt-3 font-serif text-4xl tracking-tight md:text-6xl">{copy.bookTitle}</h1>
           <p className="mt-5 text-lg leading-8 text-muted-foreground">{copy.bookLede}</p>
           <p className="mt-6 text-sm leading-7">
-            {clinic.place}
+            {clinic.brand}
             <br />
-            {clinic.street}
+            {clinic.person}
             <br />
-            {clinic.postalCode} {clinic.city}
+            {copy.factAddressValue}
+            <br />
+            {copy.college}
           </p>
         </div>
         <div id="cita" className="md:col-span-7">

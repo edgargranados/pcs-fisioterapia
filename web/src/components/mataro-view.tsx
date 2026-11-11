@@ -3,7 +3,7 @@ import { BookForm } from "@/components/book-form";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
-import { therapies } from "@/content/therapies";
+import { orderedTherapies } from "@/content/therapies";
 import { towns } from "@/content/towns";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
@@ -91,7 +91,7 @@ export function MataroView({ locale }: { locale: Locale }) {
         <section className="mx-auto w-full max-w-6xl px-5 py-6">
           <h2 className="font-serif text-3xl">{copy.therapies}</h2>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {therapies.map((therapy) => (
+            {orderedTherapies().map((therapy) => (
               <li key={therapy.id}>
                 <Link href={therapyPath(locale, therapy.slug[locale])} className="block rounded-2xl border border-border px-4 py-4 hover:bg-accent">
                   <span className="font-serif text-2xl">{therapy.name[locale]}</span>
