@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/lib.php';
 
+date_default_timezone_set('Europe/Madrid');
+
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
@@ -20,6 +22,7 @@ if (empty($_SESSION['csrf']) || !is_string($_SESSION['csrf'])) {
 $config = pcs_config();
 $hash = (string) ($config['admin_password_hash'] ?? '');
 $error = '';
+$signedIn = ($_SESSION['admin'] ?? false) === true;
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $token = (string) ($_POST['csrf'] ?? '');
@@ -31,6 +34,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         session_destroy();
         header('Location: /admin.php', true, 303);
         exit;
+    } elseif ($signedIn) {
+        try {
+            $result = pcs_crm_action(pcs_db(), $_POST);
+            if ($result['error'] !== '') {
+                $_SESSION['flash_error'] = $result['error'];
+            }
+            if ($result['ok'] !== '') {
+                $_SESSION['flash_ok'] = $result['ok'];
+            }
+            pcs_admin_redirect($result['query']);
+        } catch (Throwable) {
+            $error = 'No se ha podido guardar el cambio.';
+        }
     } elseif (!pcs_rate_limit('admin:' . pcs_client_ip(), 8, 15 * 60)) {
         $error = 'Demasiados intentos. Espera un cuarto de hora.';
     } elseif ($hash === '' && isset($_POST['create_password'])) {
@@ -64,13 +80,48 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 }
 
 $signedIn = ($_SESSION['admin'] ?? false) === true;
-$leads = [];
+$flashError = (string) ($_SESSION['flash_error'] ?? '');
+$flashOk = (string) ($_SESSION['flash_ok'] ?? '');
+unset($_SESSION['flash_error'], $_SESSION['flash_ok']);
+
+$stages = [];
+$leadsByStage = [];
+$notes = [];
+$openLead = null;
 $dbError = '';
+$activeStage = 0;
+
 if ($signedIn) {
     try {
-        $leads = pcs_db()->query(
-            'SELECT id, name, phone, email, locale, page, created_at FROM leads ORDER BY created_at DESC LIMIT 200'
+        $db = pcs_db();
+        pcs_ensure_crm($db);
+        $stages = pcs_crm_stages($db);
+        $activeStage = pcs_crm_active_stage($stages, (int) ($_GET['stage'] ?? 0));
+        $leadRows = $db->query(
+            'SELECT l.id, l.name, l.phone, l.email, l.locale, l.page, l.stage_id, l.created_at,
+                    (SELECT COUNT(*) FROM lead_notes n WHERE n.lead_id = l.id) AS note_count
+             FROM leads l
+             ORDER BY l.created_at DESC'
         )->fetchAll();
+        foreach ($stages as $stage) {
+            $leadsByStage[(int) $stage['id']] = [];
+        }
+        $fallback = $stages[0]['id'] ?? 0;
+        foreach ($leadRows as $lead) {
+            $stageId = (int) ($lead['stage_id'] ?? 0);
+            if (!isset($leadsByStage[$stageId])) {
+                $stageId = (int) $fallback;
+            }
+            $leadsByStage[$stageId][] = $lead;
+            if ((int) ($_GET['lead'] ?? 0) === (int) $lead['id']) {
+                $openLead = $lead;
+            }
+        }
+        if ($openLead !== null) {
+            $noteStmt = $db->prepare('SELECT id, body, created_at FROM lead_notes WHERE lead_id = ? ORDER BY created_at DESC, id DESC');
+            $noteStmt->execute([(int) $openLead['id']]);
+            $notes = $noteStmt->fetchAll();
+        }
     } catch (Throwable) {
         $dbError = 'No se ha podido leer la base de datos. Revisa config.local.php y que schema.sql esté importado.';
     }
@@ -79,6 +130,217 @@ if ($signedIn) {
 function h(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function pcs_admin_url(array $query): string
+{
+    $clean = [];
+    foreach ($query as $key => $value) {
+        if ($value === null || $value === '' || $value === 0) {
+            continue;
+        }
+        $clean[$key] = $value;
+    }
+    return $clean === [] ? '/admin.php' : '/admin.php?' . http_build_query($clean);
+}
+
+function pcs_admin_redirect(array $query): void
+{
+    header('Location: ' . pcs_admin_url($query), true, 303);
+    exit;
+}
+
+function pcs_crm_stages(PDO $db): array
+{
+    return $db->query('SELECT id, name, position FROM stages ORDER BY position ASC, id ASC')->fetchAll();
+}
+
+function pcs_crm_active_stage(array $stages, int $requested): int
+{
+    foreach ($stages as $stage) {
+        if ((int) $stage['id'] === $requested) {
+            return $requested;
+        }
+    }
+    return (int) ($stages[0]['id'] ?? 0);
+}
+
+function pcs_crm_reindex(PDO $db, array $ids): void
+{
+    $stmt = $db->prepare('UPDATE stages SET position = ? WHERE id = ?');
+    foreach (array_values($ids) as $position => $id) {
+        $stmt->execute([$position, (int) $id]);
+    }
+}
+
+function pcs_crm_label(string $value): ?string
+{
+    $value = preg_replace('/\s+/u', ' ', trim($value)) ?? '';
+    if ($value === '' || mb_strlen($value) > 40) {
+        return null;
+    }
+    if (preg_match('/^[\\p{L}\\p{N}][\\p{L}\\p{N}\\s.\\-]*$/u', $value) !== 1) {
+        return null;
+    }
+    return $value;
+}
+
+function pcs_crm_action(PDO $db, array $post): array
+{
+    pcs_ensure_crm($db);
+    $action = (string) ($post['action'] ?? '');
+    $stageId = (int) ($post['stage_id'] ?? 0);
+    $leadId = (int) ($post['lead_id'] ?? 0);
+    $back = [
+        'stage' => (int) ($post['back_stage'] ?? 0),
+        'lead' => (int) ($post['back_lead'] ?? 0),
+    ];
+    $stages = pcs_crm_stages($db);
+    $known = [];
+    foreach ($stages as $stage) {
+        $known[(int) $stage['id']] = $stage;
+    }
+    $fail = static function (string $message) use ($back): array {
+        return ['error' => $message, 'ok' => '', 'query' => $back];
+    };
+
+    if ($action === 'create_stage') {
+        $name = pcs_crm_label((string) ($post['name'] ?? ''));
+        if ($name === null) {
+            return $fail('Escribe un nombre de etapa de hasta 40 caracteres.');
+        }
+        if (count($stages) >= 12) {
+            return $fail('Puedes tener hasta 12 etapas.');
+        }
+        foreach ($stages as $stage) {
+            if (mb_strtolower((string) $stage['name']) === mb_strtolower($name)) {
+                return $fail('Ya existe una etapa con ese nombre.');
+            }
+        }
+        $insert = $db->prepare('INSERT INTO stages (name, position) VALUES (?, ?)');
+        $insert->execute([$name, count($stages)]);
+        return ['error' => '', 'ok' => 'Etapa creada.', 'query' => ['stage' => (int) $db->lastInsertId()]];
+    }
+
+    if ($action === 'rename_stage') {
+        $name = pcs_crm_label((string) ($post['name'] ?? ''));
+        if (!isset($known[$stageId]) || $name === null) {
+            return $fail('No se ha podido renombrar la etapa.');
+        }
+        foreach ($stages as $stage) {
+            if ((int) $stage['id'] !== $stageId && mb_strtolower((string) $stage['name']) === mb_strtolower($name)) {
+                return $fail('Ya existe una etapa con ese nombre.');
+            }
+        }
+        $update = $db->prepare('UPDATE stages SET name = ? WHERE id = ?');
+        $update->execute([$name, $stageId]);
+        $back['stage'] = $stageId;
+        return ['error' => '', 'ok' => 'Nombre actualizado.', 'query' => $back];
+    }
+
+    if ($action === 'move_stage') {
+        if (!isset($known[$stageId])) {
+            return $fail('No se ha encontrado la etapa.');
+        }
+        $ids = array_map(static fn (array $stage): int => (int) $stage['id'], $stages);
+        $index = array_search($stageId, $ids, true);
+        $next = $index + ((int) ($post['direction'] ?? 0) === 1 ? 1 : -1);
+        if ($index === false || $next < 0 || $next >= count($ids)) {
+            return ['error' => '', 'ok' => '', 'query' => ['stage' => $stageId]];
+        }
+        $swap = $ids[$next];
+        $ids[$next] = $ids[$index];
+        $ids[$index] = $swap;
+        pcs_crm_reindex($db, $ids);
+        return ['error' => '', 'ok' => '', 'query' => ['stage' => $stageId, 'lead' => $back['lead']]];
+    }
+
+    if ($action === 'delete_stage') {
+        if (!isset($known[$stageId])) {
+            return $fail('No se ha encontrado la etapa.');
+        }
+        if (count($stages) < 2) {
+            return $fail('Tiene que quedar al menos una etapa.');
+        }
+        $ids = array_map(static fn (array $stage): int => (int) $stage['id'], $stages);
+        $index = (int) array_search($stageId, $ids, true);
+        $target = $ids[$index - 1] ?? $ids[$index + 1];
+        $move = $db->prepare('UPDATE leads SET stage_id = ? WHERE stage_id = ?');
+        $move->execute([$target, $stageId]);
+        $moved = $move->rowCount();
+        $db->prepare('DELETE FROM stages WHERE id = ?')->execute([$stageId]);
+        pcs_crm_reindex($db, array_values(array_filter($ids, static fn (int $id): bool => $id !== $stageId)));
+        $ok = $moved > 0 ? 'Etapa eliminada. Los leads han pasado a la etapa de al lado.' : 'Etapa eliminada.';
+        return ['error' => '', 'ok' => $ok, 'query' => ['stage' => $target]];
+    }
+
+    if ($action === 'move_lead') {
+        if ($leadId < 1 || !isset($known[$stageId])) {
+            return $fail('No se ha podido mover el lead.');
+        }
+        $exists = $db->prepare('SELECT id FROM leads WHERE id = ?');
+        $exists->execute([$leadId]);
+        if ($exists->fetchColumn() === false) {
+            return $fail('Ese lead ya no está.');
+        }
+        $db->prepare('UPDATE leads SET stage_id = ? WHERE id = ?')->execute([$stageId, $leadId]);
+        $keep = (string) ($post['keep_lead'] ?? '') === '1';
+        return [
+            'error' => '',
+            'ok' => '',
+            'query' => [
+                'stage' => $keep ? $stageId : (int) ($post['back_stage'] ?? $stageId),
+                'lead' => $keep ? $leadId : 0,
+            ],
+        ];
+    }
+
+    if ($action === 'add_note') {
+        $body = trim((string) ($post['body'] ?? ''));
+        $body = preg_replace("/\r\n?/", "\n", $body) ?? '';
+        if ($body === '' || mb_strlen($body) > 2000) {
+            return $fail('La nota tiene que tener entre 1 y 2000 caracteres.');
+        }
+        $exists = $db->prepare('SELECT stage_id FROM leads WHERE id = ?');
+        $exists->execute([$leadId]);
+        $leadStage = $exists->fetchColumn();
+        if ($leadStage === false) {
+            return $fail('Ese lead ya no está.');
+        }
+        $db->prepare('INSERT INTO lead_notes (lead_id, body) VALUES (?, ?)')->execute([$leadId, $body]);
+        return [
+            'error' => '',
+            'ok' => 'Nota guardada.',
+            'query' => ['stage' => (int) $leadStage, 'lead' => $leadId],
+        ];
+    }
+
+    return $fail('Acción no reconocida.');
+}
+
+function pcs_when(string $value): string
+{
+    try {
+        return (new DateTimeImmutable($value))->format('d/m/Y H:i');
+    } catch (Throwable) {
+        return $value;
+    }
+}
+
+function pcs_phone_href(string $phone): string
+{
+    $digits = preg_replace('/\D/', '', $phone) ?? '';
+    return $digits === '' ? '' : 'tel:+' . $digits;
+}
+
+function pcs_lead_whatsapp(string $phone, string $name): string
+{
+    $digits = preg_replace('/\D/', '', $phone) ?? '';
+    if ($digits === '') {
+        return '';
+    }
+    $safe = mb_substr(str_replace(["\r", "\n"], ' ', $name), 0, 80);
+    return 'https://wa.me/' . $digits . '?text=' . rawurlencode("Hola {$safe}, soy Pol de PCS Fisioterapia.");
 }
 
 header('Content-Type: text/html; charset=utf-8');
@@ -93,24 +355,85 @@ header('Referrer-Policy: no-referrer');
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Citas · PCS Fisioterapia</title>
+  <title>Leads · PCS Fisioterapia</title>
   <style>
-    body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: #f6f3ec; color: #1c211c; }
-    main { max-width: 960px; margin: 0 auto; padding: 32px 20px 64px; }
-    h1 { font-weight: 500; font-size: 2rem; }
-    form, .card { background: white; border: 1px solid #ddd4c6; border-radius: 16px; padding: 20px; }
-    input { width: 100%; box-sizing: border-box; height: 44px; border-radius: 10px; border: 1px solid #ccc; padding: 0 12px; }
-    button { height: 44px; border: 0; border-radius: 999px; padding: 0 18px; background: #0a7b71; color: white; }
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
-    .error { color: #8d2b2b; }
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.45 system-ui, sans-serif; background: #f4efe6; color: #1c211c; }
     a { color: #0a7b71; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .gate { max-width: 28rem; margin: 0 auto; padding: 48px 20px; }
+    .gate h1 { font-size: 2rem; font-weight: 560; letter-spacing: -0.03em; }
+    .card, .lead, .note, .composer, .column { background: #fff; border: 1px solid #e4dccf; border-radius: 18px; }
+    .card { padding: 20px; }
+    label { display: block; font-size: 0.85rem; margin-bottom: 6px; }
+    input, select, textarea { width: 100%; border: 1px solid #d5cbbd; border-radius: 12px; background: #fff; padding: 10px 12px; }
+    input, select { min-height: 44px; }
+    textarea { min-height: 96px; resize: vertical; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border: 0; border-radius: 999px; padding: 0 16px; background: #0a7b71; color: #f6f3ec; text-decoration: none; }
+    .btn.ghost { background: #fff; color: #1c211c; border: 1px solid #d5cbbd; }
+    .btn.danger { background: transparent; color: #8d2b2b; }
+    .btn.small { min-height: 36px; padding: 0 12px; font-size: 0.85rem; }
+    .error { color: #8d2b2b; }
+    .ok { color: #0a7b71; }
+    .top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: rgba(244, 239, 230, 0.94); backdrop-filter: blur(10px); border-bottom: 1px solid #e4dccf; }
+    .top h1 { margin: 0; font-size: 1.45rem; font-weight: 560; letter-spacing: -0.03em; }
+    .brand { margin: 0; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: #0a7b71; }
+    .wrap { padding: 14px 16px 48px; }
+    .toolbar { display: grid; gap: 10px; margin-bottom: 12px; }
+    .new-stage { display: flex; gap: 8px; }
+    .new-stage input { flex: 1; }
+    .pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin: 0 -16px 12px; padding-left: 16px; padding-right: 16px; }
+    .pills a { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid #d5cbbd; background: #fff; color: #1c211c; text-decoration: none; }
+    .pills a.is-on { background: #0a7b71; border-color: #0a7b71; color: #f6f3ec; }
+    .pills span { font-size: 0.8rem; opacity: 0.8; }
+    .board { display: block; }
+    .column { display: none; padding: 14px; }
+    .column.is-current { display: block; }
+    .column-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .column h2 { margin: 0; font-size: 1.15rem; }
+    .muted { color: #5e675e; font-size: 0.85rem; }
+    details summary { cursor: pointer; color: #0a7b71; font-size: 0.85rem; }
+    .edit { display: grid; gap: 8px; margin-top: 10px; }
+    .row { display: flex; gap: 8px; }
+    .lead { padding: 14px; margin-top: 10px; }
+    .lead h3 { margin: 0; font-size: 1.12rem; }
+    .lead h3 a { color: inherit; text-decoration: none; }
+    .meta { margin: 6px 0 0; color: #5e675e; font-size: 0.9rem; }
+    .quick { display: flex; gap: 8px; margin-top: 10px; }
+    .quick a { flex: 1; }
+    .move { margin-top: 10px; }
+    .empty { margin: 14px 0 0; color: #5e675e; }
+    .flash { margin: 0 0 12px; }
+    .backdrop { position: fixed; inset: 0; background: rgba(28, 33, 28, 0.46); z-index: 20; }
+    .drawer { position: fixed; z-index: 21; inset: 0; overflow: auto; background: #f4efe6; padding: 16px 16px 40px; }
+    .drawer-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .drawer h2 { margin: 8px 0 0; font-size: 1.8rem; letter-spacing: -0.03em; }
+    .facts { margin: 14px 0; padding: 0; list-style: none; }
+    .facts li { padding: 8px 0; border-top: 1px solid #e4dccf; }
+    .stage-picks { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stage-picks button.is-on { background: #1c211c; }
+    .note { padding: 12px 14px; margin-top: 8px; }
+    .note p { margin: 6px 0 0; white-space: pre-wrap; }
+    .composer { padding: 12px; margin-top: 8px; }
+    .column.over { outline: 2px dashed #0a7b71; outline-offset: 3px; }
+    @media (min-width: 900px) {
+      .wrap { padding: 20px 24px 48px; }
+      .toolbar { grid-template-columns: minmax(0, 1fr) 320px; align-items: center; }
+      .pills { display: none; }
+      .board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; padding-bottom: 12px; }
+      .column, .column.is-current { display: flex; flex-direction: column; width: 320px; flex: 0 0 320px; min-height: 240px; }
+      .lead { cursor: grab; }
+      .drawer { inset: 0 0 0 auto; width: min(440px, 100%); box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
+    }
   </style>
 </head>
 <body>
-<main>
-  <h1>Solicitudes de cita</h1>
-  <?php if ($hash === ''): ?>
+<?php if ($hash === ''): ?>
+  <main class="gate">
+    <p class="brand">PCS Fisioterapia</p>
+    <h1>Contraseña del panel</h1>
     <form method="post" class="card">
       <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
       <input type="hidden" name="create_password" value="1">
@@ -120,45 +443,256 @@ header('Referrer-Policy: no-referrer');
       <label for="confirm">Repítela</label>
       <p><input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" required></p>
       <?php if ($error !== ''): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
-      <button type="submit">Guardar y entrar</button>
+      <button class="btn" type="submit">Guardar y entrar</button>
     </form>
-  <?php elseif (!$signedIn): ?>
+  </main>
+<?php elseif (!$signedIn): ?>
+  <main class="gate">
+    <p class="brand">PCS Fisioterapia</p>
+    <h1>Leads</h1>
     <form method="post" class="card">
       <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
       <label for="password">Contraseña</label>
       <p><input id="password" name="password" type="password" autocomplete="current-password" required></p>
       <?php if ($error !== ''): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
-      <button type="submit">Entrar</button>
+      <button class="btn" type="submit">Entrar</button>
     </form>
-  <?php else: ?>
+  </main>
+<?php else: ?>
+  <header class="top">
+    <div>
+      <p class="brand">PCS Fisioterapia</p>
+      <h1>Leads</h1>
+    </div>
     <form method="post">
       <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
-      <button type="submit" name="logout" value="1">Salir</button>
+      <button class="btn ghost" type="submit" name="logout" value="1">Salir</button>
     </form>
+  </header>
+  <main class="wrap">
+    <?php if ($error !== ''): ?><p class="flash error"><?= h($error) ?></p><?php endif; ?>
+    <?php if ($flashError !== ''): ?><p class="flash error"><?= h($flashError) ?></p><?php endif; ?>
+    <?php if ($flashOk !== ''): ?><p class="flash ok"><?= h($flashOk) ?></p><?php endif; ?>
     <?php if ($dbError !== ''): ?>
       <p class="error"><?= h($dbError) ?></p>
-    <?php elseif ($leads === []): ?>
-      <p>Todavía no hay solicitudes.</p>
     <?php else: ?>
-      <table>
-        <thead>
-          <tr><th>Fecha</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Idioma</th><th>Página</th></tr>
-        </thead>
-        <tbody>
-          <?php foreach ($leads as $lead): ?>
-            <tr>
-              <td><?= h((string) $lead['created_at']) ?></td>
-              <td><?= h((string) $lead['name']) ?></td>
-              <td><a href="tel:<?= h((string) $lead['phone']) ?>"><?= h((string) $lead['phone']) ?></a></td>
-              <td><?= h((string) ($lead['email'] ?? '')) ?></td>
-              <td><?= h((string) $lead['locale']) ?></td>
-              <td><?= h((string) ($lead['page'] ?? '')) ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+      <div class="toolbar">
+        <input id="filter" type="search" placeholder="Buscar nombre o teléfono" autocomplete="off" enterkeyhint="search">
+        <form method="post" class="new-stage">
+          <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+          <input type="hidden" name="action" value="create_stage">
+          <input type="hidden" name="back_stage" value="<?= (int) $activeStage ?>">
+          <label class="sr" for="new-stage" style="position:absolute;left:-999px">Nueva etapa</label>
+          <input id="new-stage" name="name" maxlength="40" placeholder="Nueva etapa" required>
+          <button class="btn" type="submit">Crear</button>
+        </form>
+      </div>
+      <nav class="pills" aria-label="Etapas">
+        <?php foreach ($stages as $stage): ?>
+          <?php $stageId = (int) $stage['id']; ?>
+          <a class="<?= $stageId === $activeStage ? 'is-on' : '' ?>" href="<?= h(pcs_admin_url(['stage' => $stageId])) ?>">
+            <?= h((string) $stage['name']) ?>
+            <span><?= count($leadsByStage[$stageId] ?? []) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </nav>
+      <div class="board">
+        <?php foreach ($stages as $index => $stage): ?>
+          <?php
+            $stageId = (int) $stage['id'];
+            $columnLeads = $leadsByStage[$stageId] ?? [];
+            $targetName = (string) (($stages[$index - 1]['name'] ?? null) ?: ($stages[$index + 1]['name'] ?? ''));
+            $deleteMessage = $targetName === ''
+                ? '¿Eliminar esta etapa?'
+                : 'Los leads de esta etapa pasarán a ' . $targetName . '. ¿Eliminarla?';
+          ?>
+          <section class="column<?= $stageId === $activeStage ? ' is-current' : '' ?>" data-stage="<?= $stageId ?>">
+            <div class="column-head">
+              <div>
+                <h2><?= h((string) $stage['name']) ?></h2>
+                <p class="muted"><?= count($columnLeads) ?> <?= count($columnLeads) === 1 ? 'lead' : 'leads' ?></p>
+              </div>
+            </div>
+            <details>
+              <summary>Editar etapa</summary>
+              <div class="edit">
+                <form method="post" class="row">
+                  <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+                  <input type="hidden" name="action" value="rename_stage">
+                  <input type="hidden" name="stage_id" value="<?= $stageId ?>">
+                  <input type="hidden" name="back_stage" value="<?= $stageId ?>">
+                  <input name="name" value="<?= h((string) $stage['name']) ?>" maxlength="40" aria-label="Nombre de la etapa" required>
+                  <button class="btn small" type="submit">Guardar</button>
+                </form>
+                <div class="row">
+                  <form method="post">
+                    <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+                    <input type="hidden" name="action" value="move_stage">
+                    <input type="hidden" name="stage_id" value="<?= $stageId ?>">
+                    <input type="hidden" name="direction" value="-1">
+                    <button class="btn ghost small" type="submit" <?= $index === 0 ? 'disabled' : '' ?>>Mover a la izquierda</button>
+                  </form>
+                  <form method="post">
+                    <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+                    <input type="hidden" name="action" value="move_stage">
+                    <input type="hidden" name="stage_id" value="<?= $stageId ?>">
+                    <input type="hidden" name="direction" value="1">
+                    <button class="btn ghost small" type="submit" <?= $index === count($stages) - 1 ? 'disabled' : '' ?>>Mover a la derecha</button>
+                  </form>
+                </div>
+                <form method="post" onsubmit="return confirm(<?= h(json_encode($deleteMessage, JSON_UNESCAPED_UNICODE)) ?>)">
+                  <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+                  <input type="hidden" name="action" value="delete_stage">
+                  <input type="hidden" name="stage_id" value="<?= $stageId ?>">
+                  <button class="btn danger small" type="submit">Eliminar etapa</button>
+                </form>
+              </div>
+            </details>
+            <?php if ($columnLeads === []): ?>
+              <p class="empty">Esta etapa está vacía.</p>
+            <?php endif; ?>
+            <?php foreach ($columnLeads as $lead): ?>
+              <?php
+                $id = (int) $lead['id'];
+                $phoneHref = pcs_phone_href((string) $lead['phone']);
+                $whatsapp = pcs_lead_whatsapp((string) $lead['phone'], (string) $lead['name']);
+                $search = mb_strtolower((string) $lead['name'] . ' ' . (string) $lead['phone']);
+              ?>
+              <article class="lead" draggable="false" data-lead="<?= $id ?>" data-search="<?= h($search) ?>">
+                <h3><a href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>"><?= h((string) $lead['name']) ?></a></h3>
+                <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?></p>
+                <div class="quick">
+                  <?php if ($phoneHref !== ''): ?><a class="btn ghost small" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
+                  <?php if ($whatsapp !== ''): ?><a class="btn ghost small" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
+                </div>
+                <form method="post" class="move">
+                  <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+                  <input type="hidden" name="action" value="move_lead">
+                  <input type="hidden" name="lead_id" value="<?= $id ?>">
+                  <input type="hidden" name="back_stage" value="<?= $stageId ?>">
+                  <label for="stage-<?= $id ?>">Etapa</label>
+                  <select id="stage-<?= $id ?>" name="stage_id" onchange="this.form.submit()">
+                    <?php foreach ($stages as $option): ?>
+                      <option value="<?= (int) $option['id'] ?>" <?= (int) $option['id'] === $stageId ? 'selected' : '' ?>><?= h((string) $option['name']) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </form>
+              </article>
+            <?php endforeach; ?>
+          </section>
+        <?php endforeach; ?>
+      </div>
     <?php endif; ?>
+  </main>
+  <?php if ($openLead !== null): ?>
+    <?php
+      $openId = (int) $openLead['id'];
+      $openStage = (int) ($openLead['stage_id'] ?? $activeStage);
+      $phoneHref = pcs_phone_href((string) $openLead['phone']);
+      $whatsapp = pcs_lead_whatsapp((string) $openLead['phone'], (string) $openLead['name']);
+    ?>
+    <a class="backdrop" href="<?= h(pcs_admin_url(['stage' => $activeStage])) ?>" aria-label="Cerrar ficha"></a>
+    <section class="drawer" role="dialog" aria-modal="true" aria-labelledby="lead-title">
+      <div class="drawer-top">
+        <a class="btn ghost small" href="<?= h(pcs_admin_url(['stage' => $activeStage])) ?>">Cerrar</a>
+      </div>
+      <h2 id="lead-title"><?= h((string) $openLead['name']) ?></h2>
+      <div class="quick">
+        <?php if ($phoneHref !== ''): ?><a class="btn" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
+        <?php if ($whatsapp !== ''): ?><a class="btn ghost" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
+      </div>
+      <ul class="facts">
+        <li><?= h((string) $openLead['phone']) ?></li>
+        <li><?= h((string) (($openLead['email'] ?? '') !== '' && $openLead['email'] !== null ? $openLead['email'] : 'Sin email')) ?></li>
+        <li><?= h(strtoupper((string) $openLead['locale'])) ?> · <?= h((string) (($openLead['page'] ?? '') !== '' && $openLead['page'] !== null ? $openLead['page'] : 'Página no indicada')) ?></li>
+        <li>Entró el <?= h(pcs_when((string) $openLead['created_at'])) ?></li>
+      </ul>
+      <h3>Etapa</h3>
+      <div class="stage-picks">
+        <?php foreach ($stages as $option): ?>
+          <form method="post">
+            <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+            <input type="hidden" name="action" value="move_lead">
+            <input type="hidden" name="lead_id" value="<?= $openId ?>">
+            <input type="hidden" name="stage_id" value="<?= (int) $option['id'] ?>">
+            <input type="hidden" name="keep_lead" value="1">
+            <button class="btn small<?= (int) $option['id'] === $openStage ? ' is-on' : ' ghost' ?>" type="submit"><?= h((string) $option['name']) ?></button>
+          </form>
+        <?php endforeach; ?>
+      </div>
+      <h3>Notas</h3>
+      <form method="post" class="composer">
+        <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+        <input type="hidden" name="action" value="add_note">
+        <input type="hidden" name="lead_id" value="<?= $openId ?>">
+        <label for="note-body">Añadir nota</label>
+        <textarea id="note-body" name="body" maxlength="2000" required placeholder="Qué has hablado, cuándo vuelve, qué hay que mirar…"></textarea>
+        <p><button class="btn" type="submit">Guardar nota</button></p>
+      </form>
+      <?php if ($notes === []): ?>
+        <p class="empty">Todavía no hay notas.</p>
+      <?php endif; ?>
+      <?php foreach ($notes as $note): ?>
+        <article class="note">
+          <time class="muted" datetime="<?= h((string) $note['created_at']) ?>"><?= h(pcs_when((string) $note['created_at'])) ?></time>
+          <p><?= nl2br(h((string) $note['body'])) ?></p>
+        </article>
+      <?php endforeach; ?>
+    </section>
   <?php endif; ?>
-</main>
+  <script>
+    const filter = document.getElementById("filter");
+    if (filter) {
+      filter.addEventListener("input", () => {
+        const needle = filter.value.trim().toLowerCase();
+        document.querySelectorAll("[data-search]").forEach((card) => {
+          const haystack = card.getAttribute("data-search") || "";
+          card.hidden = needle !== "" && !haystack.includes(needle);
+        });
+      });
+    }
+    const desktop = window.matchMedia("(min-width: 900px)").matches;
+    if (desktop) {
+      document.querySelectorAll("[data-lead]").forEach((card) => {
+        card.draggable = true;
+        card.addEventListener("dragstart", (event) => {
+          event.dataTransfer.setData("text/plain", card.getAttribute("data-lead") || "");
+          event.dataTransfer.effectAllowed = "move";
+        });
+      });
+      document.querySelectorAll("[data-stage]").forEach((column) => {
+        column.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          column.classList.add("over");
+        });
+        column.addEventListener("dragleave", () => column.classList.remove("over"));
+        column.addEventListener("drop", (event) => {
+          event.preventDefault();
+          column.classList.remove("over");
+          const leadId = event.dataTransfer.getData("text/plain");
+          if (!leadId) return;
+          const form = document.createElement("form");
+          form.method = "post";
+          const fields = {
+            csrf: document.querySelector("input[name=csrf]")?.value || "",
+            action: "move_lead",
+            lead_id: leadId,
+            stage_id: column.getAttribute("data-stage") || "",
+            back_stage: column.getAttribute("data-stage") || "",
+          };
+          Object.entries(fields).forEach(([name, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+        });
+      });
+    }
+  </script>
+<?php endif; ?>
 </body>
 </html>
