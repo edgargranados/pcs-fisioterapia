@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { JsonLd } from "@/components/json-ld";
+import { MobileCtaBar } from "@/components/mobile-cta-bar";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ui } from "@/content/ui";
@@ -39,16 +39,7 @@ export function SiteShell({
         {children}
       </main>
       <SiteFooter locale={locale} />
-      {hideMobileCta ? null : (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
-          <Link
-            href={`${homePath(locale)}#cita`}
-            className="flex h-12 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground"
-          >
-            {copy.book}
-          </Link>
-        </div>
-      )}
+      {hideMobileCta ? null : <MobileCtaBar href={`${homePath(locale)}#cita`} label={copy.book} />}
     </div>
   );
 }
