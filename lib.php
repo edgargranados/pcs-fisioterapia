@@ -132,7 +132,7 @@ function pcs_same_origin(): bool
     return $originHost !== '' && $originHost === $host;
 }
 
-function pcs_json(int $status, array $body): void
+function pcs_json(int $status, array $body): never
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
@@ -160,6 +160,40 @@ function pcs_normalize_phone(string $value): ?string
     return '+' . $digits;
 }
 
+function pcs_valid_name(mixed $value): ?string
+{
+    $name = preg_replace('/\s+/u', ' ', trim((string) ($value ?? ''))) ?? '';
+    if (mb_strlen($name) < 2 || mb_strlen($name) > 80 || preg_match("/^[\\p{L}][\\p{L}\\s.'’\\-]*$/u", $name) !== 1) {
+        return null;
+    }
+    return $name;
+}
+
+function pcs_parse_email_field(mixed $value): array
+{
+    $emailRaw = strtolower(trim((string) ($value ?? '')));
+    if ($emailRaw === '') {
+        return ['ok' => true, 'email' => null];
+    }
+    if (strlen($emailRaw) > 120 || filter_var($emailRaw, FILTER_VALIDATE_EMAIL) === false) {
+        return ['ok' => false, 'error' => 'email'];
+    }
+    return ['ok' => true, 'email' => $emailRaw];
+}
+
+function pcs_clean_page(mixed $page): ?string
+{
+    if (!is_string($page) || strlen($page) > 180 || preg_match('#^/[a-z0-9/-]*$#', $page) !== 1) {
+        return null;
+    }
+    return $page;
+}
+
+function pcs_parse_preference(mixed $value): ?string
+{
+    return $value === 'morning' || $value === 'afternoon' ? $value : null;
+}
+
 function pcs_parse_lead(array $body): array
 {
     if (($body['consent'] ?? null) !== true) {
@@ -169,37 +203,58 @@ function pcs_parse_lead(array $body): array
     if ($locale !== 'ca' && $locale !== 'es') {
         return ['ok' => false, 'error' => 'locale'];
     }
-    $name = preg_replace('/\s+/u', ' ', trim((string) ($body['name'] ?? ''))) ?? '';
-    if (mb_strlen($name) < 2 || mb_strlen($name) > 80 || preg_match("/^[\\p{L}][\\p{L}\\s.'’\\-]*$/u", $name) !== 1) {
+    $name = pcs_valid_name($body['name'] ?? null);
+    if ($name === null) {
         return ['ok' => false, 'error' => 'name'];
     }
     $phone = pcs_normalize_phone((string) ($body['phone'] ?? ''));
     if ($phone === null) {
         return ['ok' => false, 'error' => 'phone'];
     }
-    $emailRaw = strtolower(trim((string) ($body['email'] ?? '')));
-    $email = null;
-    if ($emailRaw !== '') {
-        if (strlen($emailRaw) > 120 || filter_var($emailRaw, FILTER_VALIDATE_EMAIL) === false) {
-            return ['ok' => false, 'error' => 'email'];
-        }
-        $email = $emailRaw;
-    }
-    $page = $body['page'] ?? null;
-    $cleanPage = null;
-    if (is_string($page) && strlen($page) <= 180 && preg_match('#^/[a-z0-9/-]*$#', $page) === 1) {
-        $cleanPage = $page;
+    $email = pcs_parse_email_field($body['email'] ?? null);
+    if ($email['ok'] !== true) {
+        return ['ok' => false, 'error' => 'email'];
     }
     return [
         'ok' => true,
         'lead' => [
             'name' => $name,
             'phone' => $phone,
-            'email' => $email,
+            'email' => $email['email'],
             'locale' => $locale,
-            'page' => $cleanPage,
+            'page' => pcs_clean_page($body['page'] ?? null),
         ],
     ];
+}
+
+function pcs_new_resume_token(): array
+{
+    $token = bin2hex(random_bytes(32));
+    return ['token' => $token, 'hash' => hash('sha256', $token)];
+}
+
+function pcs_lead_text(mixed $value): string
+{
+    return trim((string) ($value ?? ''));
+}
+
+function pcs_lead_for_update(PDO $db, array $body): array
+{
+    $raw = $body['id'] ?? null;
+    $token = $body['token'] ?? null;
+    $id = is_int($raw) ? $raw : (is_string($raw) && preg_match('/^[1-9]\d*$/', $raw) === 1 ? (int) $raw : 0);
+    if ($id < 1 || $id > 1000000000 || !is_string($token) || preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
+        return ['ok' => false, 'error' => 'lead'];
+    }
+    $statement = $db->prepare('SELECT id, name, phone, preference, resume_token FROM leads WHERE id = :id');
+    $statement->execute([':id' => $id]);
+    $row = $statement->fetch();
+    $stored = is_array($row) ? (string) ($row['resume_token'] ?? '') : '';
+    $hash = hash('sha256', $token);
+    if (!is_array($row) || strlen($stored) !== 64 || !hash_equals($stored, $hash)) {
+        return ['ok' => false, 'error' => 'lead'];
+    }
+    return ['ok' => true, 'lead' => $row, 'id' => $id, 'token' => $token];
 }
 
 function pcs_tracking_text(mixed $value, int $max): ?string
@@ -301,6 +356,43 @@ function pcs_column_exists(PDO $db, string $table, string $column): bool
     return false;
 }
 
+function pcs_make_nullable(PDO $db, string $column, string $fallback): void
+{
+    if (preg_match('/^[A-Za-z0-9_]+$/', $column) !== 1) {
+        return;
+    }
+    $meta = null;
+    foreach ($db->query('SHOW COLUMNS FROM `leads`')->fetchAll() as $row) {
+        if (($row['Field'] ?? '') === $column) {
+            $meta = $row;
+            break;
+        }
+    }
+    if ($meta === null || strtoupper((string) ($meta['Null'] ?? '')) === 'YES') {
+        return;
+    }
+    $type = strtolower((string) ($meta['Type'] ?? ''));
+    if (preg_match('/^(varchar|char)\(\d+\)$/', $type) !== 1) {
+        $type = $fallback;
+    }
+    $db->exec('ALTER TABLE `leads` MODIFY `' . $column . '` ' . $type . ' NULL');
+}
+
+function pcs_ensure_wizard(PDO $db): void
+{
+    if (!pcs_column_exists($db, 'leads', 'preference')) {
+        $db->exec('ALTER TABLE leads ADD COLUMN preference VARCHAR(16) NULL');
+    }
+    if (!pcs_column_exists($db, 'leads', 'status')) {
+        $db->exec("ALTER TABLE leads ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'complete'");
+    }
+    if (!pcs_column_exists($db, 'leads', 'resume_token')) {
+        $db->exec('ALTER TABLE leads ADD COLUMN resume_token VARCHAR(64) NULL');
+    }
+    pcs_make_nullable($db, 'name', 'varchar(80)');
+    pcs_make_nullable($db, 'phone', 'varchar(20)');
+}
+
 function pcs_ensure_crm(PDO $db): void
 {
     $db->exec(
@@ -325,6 +417,7 @@ function pcs_ensure_crm(PDO $db): void
         $db->exec('ALTER TABLE leads ADD COLUMN stage_id INT UNSIGNED NULL, ADD KEY leads_stage_idx (stage_id)');
     }
     pcs_ensure_attribution($db);
+    pcs_ensure_wizard($db);
     $count = (int) $db->query('SELECT COUNT(*) FROM stages')->fetchColumn();
     if ($count === 0) {
         $seed = ['Nuevo', 'Contactado', 'Cita', 'Seguimiento', 'Cerrado'];
