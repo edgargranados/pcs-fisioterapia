@@ -13,7 +13,13 @@ export function SiteFooter({ locale }: { locale: Locale }) {
     <footer className="bg-[#16281f] pb-24 text-[#f6f3ec] md:pb-0">
       <div className="mx-auto grid w-full max-w-6xl gap-12 px-5 py-16 md:grid-cols-12">
         <div className="md:col-span-4">
-          <p className="font-serif text-3xl tracking-tight">{clinic.brand}</p>
+          <img
+            src="/media/logo.png"
+            alt={clinic.brand}
+            width={378}
+            height={397}
+            className="h-40 w-auto rounded-2xl bg-[#f3efe6] p-3"
+          />
           <p className="mt-3 max-w-xs text-sm leading-6 text-[#f6f3ec]/75">{copy.footerNote}</p>
           <address className="mt-6 text-sm leading-7 not-italic">
             {clinic.person}

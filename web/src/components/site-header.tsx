@@ -19,10 +19,14 @@ export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternat
   return (
     <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex h-[4.5rem] w-full max-w-6xl items-center justify-between gap-4 px-5">
-        <Link href={home} className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-primary font-serif text-[13px] tracking-wide text-primary-foreground">
-            PCS
-          </span>
+        <Link href={home} className="flex min-w-0 items-center gap-3">
+          <img
+            src="/media/logo-mark.png"
+            alt=""
+            width={294}
+            height={284}
+            className="h-11 w-auto shrink-0 sm:h-12"
+          />
           <span className="leading-tight">
             <span className="block font-serif text-lg tracking-tight">Pol Carmona</span>
             <span className="block text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
