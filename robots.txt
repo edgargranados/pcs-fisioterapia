@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin.php
+Disallow: /config.local.php
+Disallow: /config.sample.php
+
+Host: https://pcsfisioterapia.com
+Sitemap: https://pcsfisioterapia.com/sitemap.xml

@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fca\u002Fterapies\u002F[slug]","\u002Fca\u002Fzones\u002F[slug]","\u002Fterapias\u002F[slug]","\u002Fzonas\u002F[slug]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
