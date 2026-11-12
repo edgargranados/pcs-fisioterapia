@@ -8,12 +8,18 @@ if (basename((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === 'lib.php') {
 
 function pcs_config(): array
 {
-    $path = __DIR__ . '/config.local.php';
-    if (!is_file($path)) {
-        return [];
+    $candidates = [
+        dirname(__DIR__) . '/config.local.php',
+        __DIR__ . '/config.local.php',
+    ];
+    foreach ($candidates as $path) {
+        if (!is_file($path)) {
+            continue;
+        }
+        $config = include $path;
+        return is_array($config) ? $config : [];
     }
-    $config = include $path;
-    return is_array($config) ? $config : [];
+    return [];
 }
 
 function pcs_db(): PDO

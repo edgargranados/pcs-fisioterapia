@@ -13,24 +13,16 @@ La web queda en `http://127.0.0.1:3847`.
 
 ## OVH, plan Starter
 
-El plan Starter no ejecuta Node. Sirve el HTML estático y guarda las citas con PHP y la base MySQL de 250 MB incluida.
-
-1. En el panel de OVH crea la base MySQL y anota servidor, nombre, usuario y contraseña. Elige PHP 8.3 y el entorno Stable64.
-2. Genera el paquete:
+El plan Starter no ejecuta Node. La rama `ovh` de GitHub contiene el HTML, el PHP y las fotos. OVH copia esa rama en `www` cuando entra un push.
 
 ```bash
-npm run build:ovh
+npm run publish:ovh
 ```
 
-3. Copia `ovh/config.sample.php` a `ovh/config.local.php` y rellena la base, el WhatsApp (con prefijo 34) y el hash del panel:
+Eso genera el sitio y lo sube a `ovh`. La rama `main` sigue siendo el código fuente.
 
-```bash
-php -r "echo password_hash('tu-clave', PASSWORD_DEFAULT), PHP_EOL;"
-```
+En el panel de OVH, el directorio `www` tiene que estar vacío. Repositorio: `git@github.com:edgargranados/pcs-fisioterapia.git`. Rama: `ovh`. La clave SSH que muestra OVH se añade al repositorio como deploy key de solo lectura. El webhook de esa pantalla se configura en GitHub para el evento push.
 
-4. Vuelve a lanzar `npm run build:ovh`. El resultado queda en `ovh-dist/`, con `config.local.php` incluido si ya existe. Ese archivo no entra en git.
-5. Sube **el contenido** de `ovh-dist/` por FTP a la carpeta `www` del hosting.
-6. En phpMyAdmin, importa `schema.sql`.
-7. Apunta `pcsfisioterapia.com` al hosting desde la zona DNS del dominio.
+La base MySQL, el WhatsApp y la contraseña del panel van en `config.local.php`, en la carpeta que contiene `www`, no dentro de `www`. Parte de `ovh/config.sample.php`. Ese archivo no entra en git. En phpMyAdmin se importa `schema.sql` una sola vez.
 
-Las solicitudes se ven en `https://pcsfisioterapia.com/admin`. El límite del plan es 1 GB de disco: la web, el vídeo y las fotos caben.
+Las solicitudes se ven en `https://pcsfisioterapia.com/admin`. El límite del plan es 1 GB de disco.

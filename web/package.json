@@ -7,7 +7,8 @@
     "build": "next build && node scripts/migrate.mjs",
     "start": "next start -p 3847",
     "lint": "eslint",
-    "build:ovh": "node scripts/export-ovh.mjs"
+    "build:ovh": "node scripts/export-ovh.mjs",
+    "publish:ovh": "node scripts/export-ovh.mjs && node scripts/publish-ovh-branch.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
