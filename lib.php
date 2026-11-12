@@ -6,20 +6,35 @@ if (basename((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === 'lib.php') {
     exit;
 }
 
-function pcs_config(): array
+function pcs_config_path(): string
 {
     $candidates = [
         dirname(__DIR__) . '/config.local.php',
         __DIR__ . '/config.local.php',
     ];
     foreach ($candidates as $path) {
-        if (!is_file($path)) {
-            continue;
+        if (is_file($path)) {
+            return $path;
         }
-        $config = include $path;
-        return is_array($config) ? $config : [];
     }
-    return [];
+    return $candidates[0];
+}
+
+function pcs_config(): array
+{
+    $path = pcs_config_path();
+    if (!is_file($path)) {
+        return [];
+    }
+    $config = include $path;
+    return is_array($config) ? $config : [];
+}
+
+function pcs_save_config(array $config): bool
+{
+    $path = pcs_config_path();
+    $php = "<?php\ndeclare(strict_types=1);\nreturn " . var_export($config, true) . ";\n";
+    return file_put_contents($path, $php) !== false;
 }
 
 function pcs_db(): PDO

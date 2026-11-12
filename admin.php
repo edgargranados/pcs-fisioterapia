@@ -33,6 +33,25 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         exit;
     } elseif (!pcs_rate_limit('admin:' . pcs_client_ip(), 8, 15 * 60)) {
         $error = 'Demasiados intentos. Espera un cuarto de hora.';
+    } elseif ($hash === '' && isset($_POST['create_password'])) {
+        $password = (string) ($_POST['password'] ?? '');
+        $confirm = (string) ($_POST['confirm'] ?? '');
+        if (strlen($password) < 8) {
+            $error = 'Usa al menos 8 caracteres.';
+        } elseif ($password !== $confirm) {
+            $error = 'Las dos contraseñas no coinciden.';
+        } else {
+            $config['admin_password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            if (!pcs_save_config($config)) {
+                $error = 'No se ha podido guardar la contraseña.';
+            } else {
+                session_regenerate_id(true);
+                $_SESSION['admin'] = true;
+                $_SESSION['csrf'] = bin2hex(random_bytes(16));
+                header('Location: /admin.php', true, 303);
+                exit;
+            }
+        }
     } elseif ($hash === '' || password_verify((string) ($_POST['password'] ?? ''), $hash) !== true) {
         $error = 'Contraseña incorrecta.';
     } else {
@@ -92,7 +111,17 @@ header('Referrer-Policy: no-referrer');
 <main>
   <h1>Solicitudes de cita</h1>
   <?php if ($hash === ''): ?>
-    <p>Falta la contraseña del panel. Crea <code>config.local.php</code> a partir de <code>config.sample.php</code> y pon <code>admin_password_hash</code>.</p>
+    <form method="post" class="card">
+      <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+      <input type="hidden" name="create_password" value="1">
+      <p>Elige la contraseña de este panel. Solo se pide esta vez.</p>
+      <label for="password">Contraseña</label>
+      <p><input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required></p>
+      <label for="confirm">Repítela</label>
+      <p><input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="8" required></p>
+      <?php if ($error !== ''): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
+      <button type="submit">Guardar y entrar</button>
+    </form>
   <?php elseif (!$signedIn): ?>
     <form method="post" class="card">
       <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
