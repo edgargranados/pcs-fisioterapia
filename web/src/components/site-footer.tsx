@@ -3,7 +3,7 @@ import { orderedTherapies } from "@/content/therapies";
 import { towns } from "@/content/towns";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
-import { bookPath, homePath, legalPath, mataroPath, privacyPath, therapyPath, zonePath, zonesPath } from "@/lib/paths";
+import { bookPath, crossfitPath, homePath, legalPath, mataroPath, privacyPath, therapyPath, zonePath, zonesPath } from "@/lib/paths";
 import { clinic } from "@/lib/site";
 
 export function SiteFooter({ locale }: { locale: Locale }) {
@@ -74,6 +74,11 @@ export function SiteFooter({ locale }: { locale: Locale }) {
             <li>
               <Link href={zonesPath(locale)} className="hover:underline">
                 {copy.zones}
+              </Link>
+            </li>
+            <li>
+              <Link href={crossfitPath(locale)} className="hover:underline">
+                {locale === "ca" ? "Fisioteràpia CrossFit" : "Fisioterapia CrossFit"}
               </Link>
             </li>
             <li>

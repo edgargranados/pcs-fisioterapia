@@ -9,6 +9,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/es", priority: 1 },
     { path: "/fisioterapia-mataro", priority: 0.9 },
     { path: "/ca/fisioterapia-mataro", priority: 0.9 },
+    { path: "/fisioterapia-crossfit-mataro", priority: 0.8 },
+    { path: "/ca/fisioterapia-crossfit-mataro", priority: 0.8 },
     { path: "/cita", priority: 0.7 },
     { path: "/ca/hora", priority: 0.7 },
     { path: "/zonas", priority: 0.7 },

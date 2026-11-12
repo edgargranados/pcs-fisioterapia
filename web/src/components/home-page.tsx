@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BookForm } from "@/components/book-form";
+import { MobileCtaBar } from "@/components/mobile-cta-bar";
 import { FaqList } from "@/components/faq-list";
 import { HeroVideo } from "@/components/hero-video";
 import { JsonLd } from "@/components/json-ld";
@@ -9,7 +10,7 @@ import { orderedTherapies } from "@/content/therapies";
 import { towns } from "@/content/towns";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
-import { homePath, mataroPath, therapyPath, zonePath, zonesPath } from "@/lib/paths";
+import { crossfitPath, homePath, mataroPath, therapyPath, zonePath, zonesPath } from "@/lib/paths";
 import { clinic, mapEmbed } from "@/lib/site";
 import { faqJsonLd } from "@/lib/seo";
 
@@ -24,9 +25,9 @@ export function HomePage({ locale }: { locale: Locale }) {
   ];
 
   return (
-    <SiteShell locale={locale} alternateHref={alternate}>
+    <SiteShell locale={locale} alternateHref={alternate} hideMobileCta>
       <JsonLd data={faqJsonLd(copy.homeFaq)} />
-      <section className="relative min-h-[100svh] overflow-hidden bg-[#141815] text-[#f6f3ec]">
+      <section className="home-hero relative overflow-hidden bg-[#141815] text-[#f6f3ec]">
         <Image
           src="/media/hero-poster.jpg"
           alt=""
@@ -38,7 +39,7 @@ export function HomePage({ locale }: { locale: Locale }) {
         <HeroVideo />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,20,17,0.45)_0%,rgba(16,20,17,0.22)_42%,rgba(16,20,17,0.55)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(16,20,17,0.82)_0%,rgba(16,20,17,0.42)_52%,rgba(16,20,17,0.12)_100%)]" />
-        <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-end px-5 pb-40 pt-32 md:justify-center md:pb-24">
+        <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col justify-end overflow-hidden px-5 py-8 md:justify-center md:py-16">
           <h1 className="max-w-4xl">
             <span className="block text-sm font-medium uppercase tracking-[0.28em] text-[#f6f3ec]/85">
               {copy.heroBrand}
@@ -63,6 +64,8 @@ export function HomePage({ locale }: { locale: Locale }) {
           <p className="mt-8 text-sm tracking-wide text-[#f6f3ec]/85">{copy.heroPlace}</p>
         </div>
       </section>
+
+      <MobileCtaBar href="#cita" label={copy.book} dock="under-hero" />
 
       <section id="pol" className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-20 md:grid-cols-12 md:py-28">
         <div className="relative aspect-[4/5] overflow-hidden rounded-[1.8rem] md:col-span-5">
@@ -143,9 +146,15 @@ export function HomePage({ locale }: { locale: Locale }) {
       <section id="pacients" className="mx-auto w-full max-w-6xl px-5 py-20 md:py-28">
         <h2 className="max-w-xl font-serif text-4xl tracking-tight md:text-5xl">{copy.audienceTitle}</h2>
         <ul className="mt-10 grid gap-x-12 md:grid-cols-2">
-          {copy.audience.map((item) => (
+          {copy.audience.map((item, index) => (
             <li key={item} className="border-t border-border py-4 font-serif text-2xl leading-snug">
-              {item}
+              {index === 0 ? (
+                <Link href={crossfitPath(locale)} className="underline decoration-primary/40 underline-offset-4 hover:decoration-primary">
+                  {item}
+                </Link>
+              ) : (
+                item
+              )}
             </li>
           ))}
         </ul>

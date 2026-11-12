@@ -144,12 +144,49 @@ summary::-webkit-details-marker {
   display: none;
 }
 
+:root {
+  --site-header-height: 4.5rem;
+  --mobile-cta-height: calc(0.75rem + 3rem + 0.75rem + 1px);
+}
+
+.home-hero {
+  height: calc(100svh - var(--site-header-height) - var(--mobile-cta-height));
+  height: calc(100dvh - var(--site-header-height) - var(--mobile-cta-height));
+}
+
+@media (min-width: 768px) {
+  .home-hero {
+    height: calc(100svh - var(--site-header-height));
+    height: calc(100dvh - var(--site-header-height));
+  }
+}
+
+.mobile-cta-slot {
+  height: var(--mobile-cta-height);
+}
+
+.mobile-cta {
+  box-sizing: border-box;
+  height: var(--mobile-cta-height);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  padding: 0.75rem;
+}
+
+.mobile-cta.is-pinned {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+}
+
 #cita,
 #terapias,
 #terapies,
 #pol,
 #consulta {
-  scroll-margin-top: 5.5rem;
+  scroll-margin-top: calc(var(--site-header-height) + 0.75rem);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -62,6 +62,14 @@ function pcs_db(): PDO
             PDO::ATTR_EMULATE_PREPARES => false,
         ]
     );
+    try {
+        $pdo->exec("SET time_zone = 'Europe/Madrid'");
+    } catch (Throwable) {
+        try {
+            $pdo->exec("SET time_zone = '+01:00'");
+        } catch (Throwable) {
+        }
+    }
     return $pdo;
 }
 
@@ -192,6 +200,57 @@ function pcs_parse_lead(array $body): array
             'page' => $cleanPage,
         ],
     ];
+}
+
+function pcs_column_exists(PDO $db, string $table, string $column): bool
+{
+    if (preg_match('/^[A-Za-z0-9_]+$/', $table) !== 1 || preg_match('/^[A-Za-z0-9_]+$/', $column) !== 1) {
+        return false;
+    }
+    foreach ($db->query('SHOW COLUMNS FROM `' . $table . '`')->fetchAll() as $row) {
+        if (($row['Field'] ?? '') === $column) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function pcs_ensure_crm(PDO $db): void
+{
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS stages (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(40) NOT NULL,
+            position INT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY stages_position_idx (position)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS lead_notes (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            lead_id BIGINT UNSIGNED NOT NULL,
+            body VARCHAR(2000) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY lead_notes_lead_idx (lead_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    if (!pcs_column_exists($db, 'leads', 'stage_id')) {
+        $db->exec('ALTER TABLE leads ADD COLUMN stage_id INT UNSIGNED NULL, ADD KEY leads_stage_idx (stage_id)');
+    }
+    $count = (int) $db->query('SELECT COUNT(*) FROM stages')->fetchColumn();
+    if ($count === 0) {
+        $seed = ['Nuevo', 'Contactado', 'Cita', 'Seguimiento', 'Cerrado'];
+        $insert = $db->prepare('INSERT INTO stages (name, position) VALUES (?, ?)');
+        foreach ($seed as $position => $name) {
+            $insert->execute([$name, $position]);
+        }
+    }
+    $first = $db->query('SELECT id FROM stages ORDER BY position ASC, id ASC LIMIT 1')->fetchColumn();
+    if ($first !== false) {
+        $assign = $db->prepare('UPDATE leads SET stage_id = ? WHERE stage_id IS NULL');
+        $assign->execute([(int) $first]);
+    }
 }
 
 function pcs_whatsapp(string $locale, string $name): string

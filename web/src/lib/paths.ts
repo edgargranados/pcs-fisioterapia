@@ -8,6 +8,10 @@ export function mataroPath(locale: Locale) {
   return locale === "ca" ? "/ca/fisioterapia-mataro" : "/fisioterapia-mataro";
 }
 
+export function crossfitPath(locale: Locale) {
+  return locale === "ca" ? "/ca/fisioterapia-crossfit-mataro" : "/fisioterapia-crossfit-mataro";
+}
+
 export function therapyBase(locale: Locale) {
   return locale === "ca" ? "/ca/terapies" : "/terapias";
 }

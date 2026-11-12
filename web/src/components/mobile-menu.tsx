@@ -47,7 +47,7 @@ export function MobileMenu({
       ? createPortal(
           <div
             id="mobile-menu"
-            className="fixed inset-x-0 bottom-0 top-[4.5rem] z-[70] overflow-y-auto overscroll-contain bg-background px-5 pb-8 pt-2"
+            className="fixed inset-x-0 bottom-0 top-[var(--site-header-height)] z-[70] overflow-y-auto overscroll-contain bg-background px-5 pb-8 pt-2"
           >
             <nav className="grid" aria-label={openLabel}>
               {links.map((link) => (

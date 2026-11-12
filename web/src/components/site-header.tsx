@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MobileMenu } from "@/components/mobile-menu";
+import { SiteHeaderFrame } from "@/components/site-header-frame";
 import { orderedTherapies } from "@/content/therapies";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
@@ -17,8 +18,8 @@ export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternat
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
-      <div className="mx-auto flex h-[4.5rem] w-full max-w-6xl items-center justify-between gap-4 px-5">
+    <SiteHeaderFrame className="sticky top-0 z-50 box-border flex min-h-[4.5rem] items-center border-b border-border/80 bg-background/90 backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5">
         <Link href={home} className="flex min-w-0 items-center gap-3">
           <img
             src="/media/logo-mark.png"
@@ -87,6 +88,6 @@ export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternat
           />
         </div>
       </div>
-    </header>
+    </SiteHeaderFrame>
   );
 }
