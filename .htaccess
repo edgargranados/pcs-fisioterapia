@@ -8,6 +8,6 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{DOCUMENT_ROOT}/$1.html -f
 RewriteRule ^(.+?)/?$ /$1.html [L]
 
-<FilesMatch "^(config\.(local|sample)\.php|schema\.sql|lib\.php)$">
+<FilesMatch "^(config\.(local|sample)\.php|schema\.sql|lib\.php|setup\.php)$">
   Require all denied
 </FilesMatch>
