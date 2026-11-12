@@ -10,7 +10,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
   const copy = ui[locale];
 
   return (
-    <footer className="bg-[#16281f] pb-24 text-[#f6f3ec] md:pb-0">
+    <footer className="bg-primary pb-24 text-[#f6f3ec] md:pb-0">
       <div className="mx-auto grid w-full max-w-6xl gap-12 px-5 py-16 md:grid-cols-12">
         <div className="md:col-span-4">
           <img
@@ -20,7 +20,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
             height={397}
             className="h-40 w-auto rounded-2xl bg-[#f3efe6] p-3"
           />
-          <p className="mt-3 max-w-xs text-sm leading-6 text-[#f6f3ec]/75">{copy.footerNote}</p>
+          <p className="mt-3 max-w-xs text-sm leading-6 text-[#f6f3ec]/90">{copy.footerNote}</p>
           <address className="mt-6 text-sm leading-7 not-italic">
             {clinic.person}
             <br />
@@ -35,7 +35,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           </a>
         </div>
         <div className="md:col-span-3">
-          <p className="text-xs uppercase tracking-[0.16em] text-[#f6f3ec]/60">{copy.therapies}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-[#f6f3ec]/80">{copy.therapies}</p>
           <ul className="mt-4 space-y-2 text-sm">
             {orderedTherapies().map((therapy) => (
               <li key={therapy.id}>
@@ -47,7 +47,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           </ul>
         </div>
         <div className="md:col-span-3">
-          <p className="text-xs uppercase tracking-[0.16em] text-[#f6f3ec]/60">{copy.footerZones}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-[#f6f3ec]/80">{copy.footerZones}</p>
           <ul className="mt-4 flex flex-wrap gap-x-3 gap-y-2 text-sm">
             <li>
               <Link href={mataroPath(locale)} className="hover:underline">
@@ -64,7 +64,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           </ul>
         </div>
         <div className="md:col-span-2">
-          <p className="text-xs uppercase tracking-[0.16em] text-[#f6f3ec]/60">{copy.consult}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-[#f6f3ec]/80">{copy.consult}</p>
           <ul className="mt-4 space-y-2 text-sm">
             <li>
               <Link href={bookPath(locale)} className="hover:underline">
@@ -95,7 +95,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
         </div>
       </div>
       <div className="border-t border-white/10">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-[#f6f3ec]/60 sm:flex-row sm:justify-between">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-[#f6f3ec]/80 sm:flex-row sm:justify-between">
           <p>© 2026 {clinic.fullName}</p>
           <p>
             {clinic.collegeName} · {clinic.collegeNumber}

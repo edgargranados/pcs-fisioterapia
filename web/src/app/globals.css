@@ -56,18 +56,18 @@
   --card-foreground: #1c211c;
   --popover: #f7f4ee;
   --popover-foreground: #1c211c;
-  --primary: #1e4636;
+  --primary: #0a7b71;
   --primary-foreground: #f6f3ec;
   --secondary: #e7e1d4;
   --secondary-foreground: #1c211c;
   --muted: #e8e2d6;
   --muted-foreground: #5c635b;
-  --accent: #e5efe8;
-  --accent-foreground: #1e4636;
+  --accent: #e5f4f2;
+  --accent-foreground: #0a7b71;
   --destructive: #9c3418;
   --border: #d9d2c4;
   --input: #d4cdbf;
-  --ring: #1e4636;
+  --ring: #0a7b71;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -132,7 +132,7 @@
 }
 
 ::selection {
-  background: #1e4636;
+  background: #0a7b71;
   color: #f6f3ec;
 }
 

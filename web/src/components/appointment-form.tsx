@@ -161,7 +161,7 @@ export function AppointmentForm({
           </label>
         </div>
         <label htmlFor={consentId} className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
-          <input id={consentId} name="consent" type="checkbox" required className="mt-1 size-4 accent-[#1e4636]" />
+          <input id={consentId} name="consent" type="checkbox" required className="mt-1 size-4 accent-[#0a7b71]" />
           <span>
             {copy.formConsent}{" "}
             <Link href={privacyPath(locale)} className="text-foreground underline underline-offset-4">

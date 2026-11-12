@@ -55,7 +55,7 @@ export function HomePage({ locale }: { locale: Locale }) {
           <div className="mt-8">
             <Link
               href="#cita"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-[#f6f3ec] px-6 text-base font-medium text-[#1c211c] hover:bg-white"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 text-base font-medium text-primary-foreground hover:bg-[#08685f]"
             >
               {copy.heroCta}
             </Link>
@@ -158,9 +158,9 @@ export function HomePage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      <section className="bg-[#16281f] text-[#f6f3ec]">
+      <section className="bg-primary text-[#f6f3ec]">
         <div className="mx-auto w-full max-w-6xl px-5 py-20">
-          <p className="text-xs uppercase tracking-[0.18em] text-[#f6f3ec]/60">{copy.zonesKicker}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#f6f3ec]/80">{copy.zonesKicker}</p>
           <h2 className="mt-3 max-w-xl font-serif text-4xl tracking-tight md:text-5xl">{copy.zonesTitle}</h2>
           <p className="mt-5 max-w-2xl text-[#f6f3ec]/80">{copy.zonesBody}</p>
           <ul className="mt-10 flex flex-wrap gap-2">

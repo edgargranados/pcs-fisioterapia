@@ -81,11 +81,11 @@ header('Referrer-Policy: no-referrer');
     h1 { font-weight: 500; font-size: 2rem; }
     form, .card { background: white; border: 1px solid #ddd4c6; border-radius: 16px; padding: 20px; }
     input { width: 100%; box-sizing: border-box; height: 44px; border-radius: 10px; border: 1px solid #ccc; padding: 0 12px; }
-    button { height: 44px; border: 0; border-radius: 999px; padding: 0 18px; background: #1e4636; color: white; }
+    button { height: 44px; border: 0; border-radius: 999px; padding: 0 18px; background: #0a7b71; color: white; }
     table { width: 100%; border-collapse: collapse; background: white; }
     th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
     .error { color: #8d2b2b; }
-    a { color: #1e4636; }
+    a { color: #0a7b71; }
   </style>
 </head>
 <body>
