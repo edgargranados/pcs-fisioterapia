@@ -1,7 +1,15 @@
+Options -Indexes
 RewriteEngine On
 
 RewriteRule ^ca/?$ / [R=301,L]
 RewriteRule ^admin/?$ /admin.php [END]
+
+# Next exporta cada página como archivo.html y también como carpeta con datos internos.
+# Si no se reescribe, Apache lista la carpeta al recargar.
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_URI} ^/(.+?)/?$
+RewriteCond %{DOCUMENT_ROOT}/%1.html -f
+RewriteRule ^ /%1.html [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
