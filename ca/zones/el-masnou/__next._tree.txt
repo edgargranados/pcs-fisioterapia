@@ -1,4 +1,4 @@
-:HL["/_next/static/chunks/1c-uad93wnqiy.css","style"]
+:HL["/_next/static/chunks/2aea84q5k07ls.css","style"]
 :HL["/_next/static/media/c0680f1bdb3a2e90-s.p.1gsd1jahc5dg_.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/ddb686d70dc9968d-s.p.16u3vygyjnhr0.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/edb99fec956915f8-s.p.32sris142tqlb.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
@@ -8,4 +8,4 @@
 3:[["children",{"s":{"n":"slug","t":"d","k":"el-masnou","s":[]},"h":96,"c":"$Q4"}]]
 2:[["children",{"s":"zones","h":96,"c":"$Q3"}]]
 1:[["children",{"s":"ca","h":64,"c":"$Q2"}]]
-0:{"b":"mw-XOM3CT93qnktHz96Zd","t":{"t":{"s":"","h":16,"c":"$Q1"}}}
+0:{"b":"XO-9DoPtZjxbGE0uVjkZD","t":{"t":{"s":"","h":16,"c":"$Q1"}}}
