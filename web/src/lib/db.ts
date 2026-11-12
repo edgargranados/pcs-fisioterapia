@@ -11,6 +11,32 @@ const globalDb = globalThis as unknown as {
   pcsLocal?: Promise<PGlite>;
 };
 
+const attributionColumns = [
+  "referrer",
+  "landing_url",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+  "gclid",
+  "fbclid",
+  "gbraid",
+  "wbraid",
+  "msclkid",
+  "ttclid",
+] as const;
+
+let attributionReady = false;
+
+export async function ensureLeadAttribution() {
+  if (attributionReady) return;
+  for (const column of attributionColumns) {
+    await sql(`alter table leads add column if not exists ${column} text`);
+  }
+  attributionReady = true;
+}
+
 export async function sql<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = [],

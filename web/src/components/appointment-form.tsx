@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ui } from "@/content/ui";
+import { readAttribution } from "@/lib/attribution";
 import type { Locale } from "@/lib/locale";
 import { privacyPath } from "@/lib/paths";
 import { cn } from "cn";
@@ -50,7 +51,7 @@ export function AppointmentForm({
       const response = await fetch(process.env.NEXT_PUBLIC_LEAD_API || "/api/citas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, email, company, consent, locale, page }),
+        body: JSON.stringify({ name, phone, email, company, consent, locale, page, ...readAttribution() }),
       });
       const payload = (await response.json().catch(() => null)) as {
         ok?: boolean;

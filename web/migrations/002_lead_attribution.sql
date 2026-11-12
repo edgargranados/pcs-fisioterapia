@@ -1,0 +1,13 @@
+alter table leads add column if not exists referrer text;
+alter table leads add column if not exists landing_url text;
+alter table leads add column if not exists utm_source text;
+alter table leads add column if not exists utm_medium text;
+alter table leads add column if not exists utm_campaign text;
+alter table leads add column if not exists utm_term text;
+alter table leads add column if not exists utm_content text;
+alter table leads add column if not exists gclid text;
+alter table leads add column if not exists fbclid text;
+alter table leads add column if not exists gbraid text;
+alter table leads add column if not exists wbraid text;
+alter table leads add column if not exists msclkid text;
+alter table leads add column if not exists ttclid text;

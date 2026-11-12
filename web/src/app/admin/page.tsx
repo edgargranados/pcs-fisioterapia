@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { cookies } from "next/headers";
 import { AdminLogin, AdminLogout } from "@/components/admin-login";
 import { adminConfigured, adminCookieName, isAdminCookie } from "@/lib/admin-auth";
-import { sql } from "@/lib/db";
+import { ensureLeadAttribution, sql } from "@/lib/db";
 
 export const instant = false;
 
@@ -18,8 +18,25 @@ type LeadRow = {
   email: string | null;
   locale: string;
   page: string | null;
+  referrer: string | null;
+  landing_url: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
   created_at: string | Date;
 };
+
+function originLabel(lead: LeadRow) {
+  if (lead.utm_source) return lead.utm_medium ? `${lead.utm_source} · ${lead.utm_medium}` : lead.utm_source;
+  if (lead.referrer) {
+    try {
+      return new URL(lead.referrer).host;
+    } catch {
+      return lead.referrer;
+    }
+  }
+  return "Directo";
+}
 
 const dateFormat = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "medium",
@@ -33,9 +50,12 @@ export default async function AdminPage() {
   const jar = await cookies();
   const authed = configured && isAdminCookie(jar.get(adminCookieName)?.value);
   const leads = authed
-    ? await sql<LeadRow>(
-        "select id, name, phone, email, locale, page, created_at from leads order by created_at desc limit 200",
-      )
+    ? await (async () => {
+        await ensureLeadAttribution();
+        return sql<LeadRow>(
+          "select id, name, phone, email, locale, page, referrer, landing_url, utm_source, utm_medium, utm_campaign, created_at from leads order by created_at desc limit 200",
+        );
+      })()
     : [];
 
   return (
@@ -71,7 +91,8 @@ export default async function AdminPage() {
                   <th className="py-3 pr-4 font-medium">Teléfono</th>
                   <th className="py-3 pr-4 font-medium">Email</th>
                   <th className="py-3 pr-4 font-medium">Idioma</th>
-                  <th className="py-3 font-medium">Página</th>
+                  <th className="py-3 pr-4 font-medium">Página</th>
+                  <th className="py-3 font-medium">Origen</th>
                 </tr>
               </thead>
               <tbody>
@@ -86,7 +107,11 @@ export default async function AdminPage() {
                     </td>
                     <td className="py-3 pr-4">{lead.email ?? "—"}</td>
                     <td className="py-3 pr-4 uppercase">{lead.locale}</td>
-                    <td className="py-3">{lead.page ?? "—"}</td>
+                    <td className="py-3 pr-4">{lead.page ?? "—"}</td>
+                    <td className="py-3">
+                      {originLabel(lead)}
+                      {lead.utm_campaign ? <span className="block text-muted-foreground">{lead.utm_campaign}</span> : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

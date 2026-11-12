@@ -1,3 +1,4 @@
+import { AttributionCapture } from "@/components/attribution-capture";
 import { JsonLd } from "@/components/json-ld";
 import { MobileCtaBar } from "@/components/mobile-cta-bar";
 import { SiteFooter } from "@/components/site-footer";
@@ -34,6 +35,7 @@ export function SiteShell({
       >
         {copy.skip}
       </a>
+      <AttributionCapture />
       <SiteHeader locale={locale} alternateHref={alternateHref} />
       <main id="contenido" className="flex-1">
         {children}

@@ -62,7 +62,7 @@ function PrivacyCopy({ locale }: { locale: Locale }) {
     return (
       <>
         <p>Responsable: {clinic.fullName}, consulta a {clinic.street}, {clinic.postalCode} {clinic.city}.</p>
-        <p>Dades que es demanen: nom, telèfon i, si el vols deixar, correu electrònic. També es desa l&apos;idioma i la pàgina des de la qual envies el formulari, i el moment de la sol·licitud.</p>
+        <p>Dades que es demanen: nom, telèfon i, si el vols deixar, correu electrònic. També es desa l&apos;idioma, la pàgina des de la qual envies el formulari, el moment de la sol·licitud, la pàgina per on vas entrar, la web de procedència i els paràmetres de campanya de l&apos;enllaç (utm i identificadors de clic), si n&apos;hi havia.</p>
         <p>Finalitat: respondre a la petició d&apos;hora i gestionar la cita. La base és el teu consentiment, que dónes en marcar la casella, i la relació precontractual de demanar visita.</p>
         <p>No es venen ni es cedeixen a tercers per a publicitat. Es conserven el temps necessari per atendre la sol·licitud i, si no hi ha una relació assistencial, com a màxim 12 mesos.</p>
         <p>El botó de WhatsApp no envia res sol. Si el prems, s&apos;obre WhatsApp al teu telèfon amb un missatge que pots editar abans d&apos;enviar. Aquesta conversa la gestiona Meta, no aquesta web.</p>
@@ -75,7 +75,7 @@ function PrivacyCopy({ locale }: { locale: Locale }) {
   return (
     <>
       <p>Responsable: {clinic.fullName}, consulta en {clinic.street}, {clinic.postalCode} {clinic.city}.</p>
-      <p>Datos que se piden: nombre, teléfono y, si quieres dejarlo, email. También se guarda el idioma, la página desde la que envías el formulario y el momento de la solicitud.</p>
+      <p>Datos que se piden: nombre, teléfono y, si quieres dejarlo, email. También se guarda el idioma, la página desde la que envías el formulario, el momento de la solicitud, la página por la que entraste, la web de procedencia y los parámetros de campaña del enlace (utm e identificadores de clic), si venían.</p>
       <p>Finalidad: responder a la petición de cita y gestionarla. La base es tu consentimiento, que das al marcar la casilla, y la relación precontractual de pedir visita.</p>
       <p>No se venden ni se ceden a terceros para publicidad. Se conservan el tiempo necesario para atender la solicitud y, si no hay una relación asistencial, como máximo 12 meses.</p>
       <p>El botón de WhatsApp no envía nada solo. Si lo pulsas, se abre WhatsApp en tu teléfono con un mensaje que puedes editar antes de enviar. Esa conversación la gestiona Meta, no esta web.</p>

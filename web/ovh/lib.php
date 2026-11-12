@@ -202,6 +202,92 @@ function pcs_parse_lead(array $body): array
     ];
 }
 
+function pcs_tracking_text(mixed $value, int $max): ?string
+{
+    if (!is_string($value)) {
+        return null;
+    }
+    $value = trim((string) (preg_replace('/[\x00-\x1F\x7F]/u', '', $value) ?? ''));
+    if ($value === '') {
+        return null;
+    }
+    if (mb_strlen($value) > $max) {
+        $value = mb_substr($value, 0, $max);
+    }
+    return $value;
+}
+
+function pcs_parse_attribution(array $body): array
+{
+    $landing = pcs_tracking_text($body['landing_url'] ?? null, 500);
+    if ($landing === null || !str_starts_with($landing, '/') || str_starts_with($landing, '//') || str_contains($landing, '://')) {
+        $landing = null;
+    }
+    $referrer = null;
+    $referrerRaw = pcs_tracking_text($body['referrer'] ?? null, 500);
+    if ($referrerRaw !== null && preg_match('#^https?://#i', $referrerRaw) === 1) {
+        $parts = parse_url($referrerRaw);
+        if (is_array($parts) && isset($parts['host']) && is_string($parts['host']) && $parts['host'] !== '') {
+            $scheme = strtolower((string) ($parts['scheme'] ?? 'https')) === 'http' ? 'http' : 'https';
+            $referrer = $scheme . '://' . $parts['host'];
+            if (isset($parts['port'])) {
+                $referrer .= ':' . (int) $parts['port'];
+            }
+            $referrer .= ($parts['path'] ?? '') . (isset($parts['query']) ? '?' . $parts['query'] : '');
+            $referrer = pcs_tracking_text($referrer, 500);
+        }
+    }
+    $fields = [
+        'utm_source' => 120,
+        'utm_medium' => 120,
+        'utm_campaign' => 180,
+        'utm_term' => 180,
+        'utm_content' => 180,
+        'gclid' => 200,
+        'fbclid' => 200,
+        'gbraid' => 200,
+        'wbraid' => 200,
+        'msclkid' => 200,
+        'ttclid' => 200,
+    ];
+    $attribution = [
+        'referrer' => $referrer,
+        'landing_url' => $landing,
+    ];
+    foreach ($fields as $name => $max) {
+        $attribution[$name] = pcs_tracking_text($body[$name] ?? null, $max);
+    }
+    return $attribution;
+}
+
+function pcs_ensure_attribution(PDO $db): void
+{
+    $columns = [
+        'referrer' => 'VARCHAR(500) NULL',
+        'landing_url' => 'VARCHAR(500) NULL',
+        'utm_source' => 'VARCHAR(120) NULL',
+        'utm_medium' => 'VARCHAR(120) NULL',
+        'utm_campaign' => 'VARCHAR(180) NULL',
+        'utm_term' => 'VARCHAR(180) NULL',
+        'utm_content' => 'VARCHAR(180) NULL',
+        'gclid' => 'VARCHAR(200) NULL',
+        'fbclid' => 'VARCHAR(200) NULL',
+        'gbraid' => 'VARCHAR(200) NULL',
+        'wbraid' => 'VARCHAR(200) NULL',
+        'msclkid' => 'VARCHAR(200) NULL',
+        'ttclid' => 'VARCHAR(200) NULL',
+    ];
+    $existing = [];
+    foreach ($db->query('SHOW COLUMNS FROM `leads`')->fetchAll() as $row) {
+        $existing[(string) ($row['Field'] ?? '')] = true;
+    }
+    foreach ($columns as $name => $definition) {
+        if (!isset($existing[$name])) {
+            $db->exec('ALTER TABLE leads ADD COLUMN `' . $name . '` ' . $definition);
+        }
+    }
+}
+
 function pcs_column_exists(PDO $db, string $table, string $column): bool
 {
     if (preg_match('/^[A-Za-z0-9_]+$/', $table) !== 1 || preg_match('/^[A-Za-z0-9_]+$/', $column) !== 1) {
@@ -238,6 +324,7 @@ function pcs_ensure_crm(PDO $db): void
     if (!pcs_column_exists($db, 'leads', 'stage_id')) {
         $db->exec('ALTER TABLE leads ADD COLUMN stage_id INT UNSIGNED NULL, ADD KEY leads_stage_idx (stage_id)');
     }
+    pcs_ensure_attribution($db);
     $count = (int) $db->query('SELECT COUNT(*) FROM stages')->fetchColumn();
     if ($count === 0) {
         $seed = ['Nuevo', 'Contactado', 'Cita', 'Seguimiento', 'Cerrado'];

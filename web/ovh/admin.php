@@ -99,6 +99,8 @@ if ($signedIn) {
         $activeStage = pcs_crm_active_stage($stages, (int) ($_GET['stage'] ?? 0));
         $leadRows = $db->query(
             'SELECT l.id, l.name, l.phone, l.email, l.locale, l.page, l.stage_id, l.created_at,
+                    l.referrer, l.landing_url, l.utm_source, l.utm_medium, l.utm_campaign, l.utm_term, l.utm_content,
+                    l.gclid, l.fbclid, l.gbraid, l.wbraid, l.msclkid, l.ttclid,
                     (SELECT COUNT(*) FROM lead_notes n WHERE n.lead_id = l.id) AS note_count
              FROM leads l
              ORDER BY l.created_at DESC'
@@ -333,6 +335,20 @@ function pcs_phone_href(string $phone): string
     return $digits === '' ? '' : 'tel:+' . $digits;
 }
 
+function pcs_origin_label(array $lead): string
+{
+    $source = trim((string) ($lead['utm_source'] ?? ''));
+    $medium = trim((string) ($lead['utm_medium'] ?? ''));
+    if ($source !== '') {
+        return $medium !== '' ? $source . ' · ' . $medium : $source;
+    }
+    $host = parse_url((string) ($lead['referrer'] ?? ''), PHP_URL_HOST);
+    if (is_string($host) && $host !== '') {
+        return $host;
+    }
+    return 'Directo';
+}
+
 function pcs_lead_whatsapp(string $phone, string $name): string
 {
     $digits = preg_replace('/\D/', '', $phone) ?? '';
@@ -556,11 +572,12 @@ header('Referrer-Policy: no-referrer');
                 $id = (int) $lead['id'];
                 $phoneHref = pcs_phone_href((string) $lead['phone']);
                 $whatsapp = pcs_lead_whatsapp((string) $lead['phone'], (string) $lead['name']);
-                $search = mb_strtolower((string) $lead['name'] . ' ' . (string) $lead['phone']);
+                $search = mb_strtolower((string) $lead['name'] . ' ' . (string) $lead['phone'] . ' ' . (string) ($lead['utm_source'] ?? '') . ' ' . (string) ($lead['utm_campaign'] ?? '') . ' ' . (string) ($lead['referrer'] ?? ''));
               ?>
               <article class="lead" draggable="false" data-lead="<?= $id ?>" data-search="<?= h($search) ?>">
                 <h3><a href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>"><?= h((string) $lead['name']) ?></a></h3>
                 <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?></p>
+                <p class="meta"><?= h(pcs_origin_label($lead)) ?></p>
                 <div class="quick">
                   <?php if ($phoneHref !== ''): ?><a class="btn ghost small" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
                   <?php if ($whatsapp !== ''): ?><a class="btn ghost small" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
@@ -606,6 +623,28 @@ header('Referrer-Policy: no-referrer');
         <li><?= h((string) (($openLead['email'] ?? '') !== '' && $openLead['email'] !== null ? $openLead['email'] : 'Sin email')) ?></li>
         <li><?= h(strtoupper((string) $openLead['locale'])) ?> · <?= h((string) (($openLead['page'] ?? '') !== '' && $openLead['page'] !== null ? $openLead['page'] : 'Página no indicada')) ?></li>
         <li>Entró el <?= h(pcs_when((string) $openLead['created_at'])) ?></li>
+      </ul>
+      <h3>De dónde vino</h3>
+      <ul class="facts">
+        <li><?= h(pcs_origin_label($openLead)) ?></li>
+        <?php foreach ([
+            'Campaña' => 'utm_campaign',
+            'Anuncio' => 'utm_content',
+            'Término' => 'utm_term',
+            'Entrada' => 'landing_url',
+            'Procedencia' => 'referrer',
+            'gclid' => 'gclid',
+            'fbclid' => 'fbclid',
+            'gbraid' => 'gbraid',
+            'wbraid' => 'wbraid',
+            'msclkid' => 'msclkid',
+            'ttclid' => 'ttclid',
+        ] as $label => $key): ?>
+          <?php $value = trim((string) ($openLead[$key] ?? '')); ?>
+          <?php if ($value !== ''): ?>
+            <li><span class="muted"><?= h($label) ?></span><br><?= h($value) ?></li>
+          <?php endif; ?>
+        <?php endforeach; ?>
       </ul>
       <h3>Etapa</h3>
       <div class="stage-picks">

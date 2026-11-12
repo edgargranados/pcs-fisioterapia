@@ -1,3 +1,4 @@
+import { sanitizeAttribution, type Attribution } from "@/lib/attribution";
 import type { Locale } from "@/lib/locale";
 
 export type LeadInput = {
@@ -6,7 +7,7 @@ export type LeadInput = {
   email: string | null;
   locale: Locale;
   page: string | null;
-};
+} & Attribution;
 
 export type LeadError = "name" | "phone" | "email" | "consent" | "locale";
 
@@ -41,7 +42,7 @@ export function parseLead(
 
   return {
     ok: true,
-    lead: { name, phone, email, locale, page: cleanPage(body.page) },
+    lead: { name, phone, email, locale, page: cleanPage(body.page), ...sanitizeAttribution(body) },
   };
 }
 
