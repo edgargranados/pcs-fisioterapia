@@ -1,6 +1,6 @@
-:HL["/_next/static/chunks/3-mn8g7wg0qp-.css","style"]
+:HL["/_next/static/chunks/12f-3b1-temum.css","style"]
 :HL["/media/logo-mark.png","image"]
 :HL["/media/logo.png","image"]
 2:[["children",{"s":"__PAGE__","h":160}]]
 1:[["children",{"s":"/_not-found","h":64,"c":"$Q2"}]]
-0:{"b":"Ob1m0Km7jHNHE7e-52jlQ","t":{"t":{"s":"","h":16,"c":"$Q1"}}}
+0:{"b":"t0uuDIocFbfk7bYsLJceb","t":{"t":{"s":"","h":16,"c":"$Q1"}}}
