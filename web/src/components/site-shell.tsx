@@ -1,3 +1,4 @@
+import { AppointmentProvider } from "@/components/appointment-wizard";
 import { AttributionCapture } from "@/components/attribution-capture";
 import { JsonLd } from "@/components/json-ld";
 import { MobileCtaBar } from "@/components/mobile-cta-bar";
@@ -5,8 +6,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ui } from "@/content/ui";
 import type { Locale } from "@/lib/locale";
-import { homePath } from "@/lib/paths";
 import { businessJsonLd } from "@/lib/seo";
+import { getWhatsappNumber } from "@/lib/whatsapp";
 
 export function SiteShell({
   locale,
@@ -22,7 +23,7 @@ export function SiteShell({
   const copy = ui[locale];
 
   return (
-    <div lang={locale} className="flex min-h-full flex-col bg-background text-foreground">
+    <AppointmentProvider locale={locale} whatsappNumber={getWhatsappNumber()}>
       <script
         dangerouslySetInnerHTML={{
           __html: `document.documentElement.lang=${JSON.stringify(locale)}`,
@@ -41,7 +42,7 @@ export function SiteShell({
         {children}
       </main>
       <SiteFooter locale={locale} />
-      {hideMobileCta ? null : <MobileCtaBar href={`${homePath(locale)}#cita`} label={copy.book} />}
-    </div>
+      {hideMobileCta ? null : <MobileCtaBar label={copy.book} />}
+    </AppointmentProvider>
   );
 }

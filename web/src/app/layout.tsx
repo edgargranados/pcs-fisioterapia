@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ca" className={`${outfit.variable} ${fraunces.variable} h-full antialiased`}>
+    <html lang="ca" className={`${outfit.variable} ${fraunces.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full bg-background text-foreground">{children}</body>
     </html>
   );

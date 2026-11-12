@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookButton } from "@/components/appointment-wizard";
 import { MobileMenu } from "@/components/mobile-menu";
 import { SiteHeaderFrame } from "@/components/site-header-frame";
 import { orderedTherapies } from "@/content/therapies";
@@ -76,9 +77,9 @@ export function SiteHeader({ locale, alternateHref }: { locale: Locale; alternat
           >
             {copy.langLabel}
           </Link>
-          <Link href={`${home}#cita`} className="hidden h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground sm:inline-flex">
+          <BookButton className="hidden h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-[#08685f] sm:inline-flex">
             {copy.book}
-          </Link>
+          </BookButton>
           <MobileMenu
             links={links}
             cta={{ href: `${home}#cita`, label: copy.book }}

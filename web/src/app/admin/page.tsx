@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { cookies } from "next/headers";
 import { AdminLogin, AdminLogout } from "@/components/admin-login";
 import { adminConfigured, adminCookieName, isAdminCookie } from "@/lib/admin-auth";
-import { ensureLeadAttribution, sql } from "@/lib/db";
+import { ensureLeadAttribution, ensureLeadWizard, sql } from "@/lib/db";
 
 export const instant = false;
 
@@ -13,8 +13,10 @@ export const metadata = {
 
 type LeadRow = {
   id: number | string;
-  name: string;
-  phone: string;
+  name: string | null;
+  phone: string | null;
+  preference: string | null;
+  status: string | null;
   email: string | null;
   locale: string;
   page: string | null;
@@ -25,6 +27,12 @@ type LeadRow = {
   utm_campaign: string | null;
   created_at: string | Date;
 };
+
+function preferenceLabel(value: string | null) {
+  if (value === "morning") return "Mañanas";
+  if (value === "afternoon") return "Tardes";
+  return "—";
+}
 
 function originLabel(lead: LeadRow) {
   if (lead.utm_source) return lead.utm_medium ? `${lead.utm_source} · ${lead.utm_medium}` : lead.utm_source;
@@ -52,8 +60,9 @@ export default async function AdminPage() {
   const leads = authed
     ? await (async () => {
         await ensureLeadAttribution();
+        await ensureLeadWizard();
         return sql<LeadRow>(
-          "select id, name, phone, email, locale, page, referrer, landing_url, utm_source, utm_medium, utm_campaign, created_at from leads order by created_at desc limit 200",
+          "select id, name, phone, email, locale, page, preference, status, referrer, landing_url, utm_source, utm_medium, utm_campaign, created_at from leads order by created_at desc limit 200",
         );
       })()
     : [];
@@ -89,6 +98,7 @@ export default async function AdminPage() {
                   <th className="py-3 pr-4 font-medium">Fecha</th>
                   <th className="py-3 pr-4 font-medium">Nombre</th>
                   <th className="py-3 pr-4 font-medium">Teléfono</th>
+                  <th className="py-3 pr-4 font-medium">Franja</th>
                   <th className="py-3 pr-4 font-medium">Email</th>
                   <th className="py-3 pr-4 font-medium">Idioma</th>
                   <th className="py-3 pr-4 font-medium">Página</th>
@@ -99,12 +109,20 @@ export default async function AdminPage() {
                 {leads.map((lead) => (
                   <tr key={String(lead.id)} className="border-b border-border/80">
                     <td className="py-3 pr-4 whitespace-nowrap">{dateFormat.format(new Date(lead.created_at))}</td>
-                    <td className="py-3 pr-4">{lead.name}</td>
                     <td className="py-3 pr-4">
-                      <a href={`tel:${lead.phone}`} className="underline underline-offset-4">
-                        {lead.phone}
-                      </a>
+                      {lead.name?.trim() || "Sin nombre"}
+                      {lead.status === "partial" ? " · Incompleta" : ""}
                     </td>
+                    <td className="py-3 pr-4">
+                      {lead.phone ? (
+                        <a href={`tel:${lead.phone}`} className="underline underline-offset-4">
+                          {lead.phone}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="py-3 pr-4">{preferenceLabel(lead.preference)}</td>
                     <td className="py-3 pr-4">{lead.email ?? "—"}</td>
                     <td className="py-3 pr-4 uppercase">{lead.locale}</td>
                     <td className="py-3 pr-4">{lead.page ?? "—"}</td>

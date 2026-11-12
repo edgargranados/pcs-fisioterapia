@@ -98,7 +98,7 @@ if ($signedIn) {
         $stages = pcs_crm_stages($db);
         $activeStage = pcs_crm_active_stage($stages, (int) ($_GET['stage'] ?? 0));
         $leadRows = $db->query(
-            'SELECT l.id, l.name, l.phone, l.email, l.locale, l.page, l.stage_id, l.created_at,
+            'SELECT l.id, l.name, l.phone, l.email, l.locale, l.page, l.preference, l.status, l.stage_id, l.created_at,
                     l.referrer, l.landing_url, l.utm_source, l.utm_medium, l.utm_campaign, l.utm_term, l.utm_content,
                     l.gclid, l.fbclid, l.gbraid, l.wbraid, l.msclkid, l.ttclid,
                     (SELECT COUNT(*) FROM lead_notes n WHERE n.lead_id = l.id) AS note_count
@@ -329,6 +329,11 @@ function pcs_when(string $value): string
     }
 }
 
+function pcs_preference_label(mixed $value): string
+{
+    return $value === 'morning' ? 'Mañanas' : ($value === 'afternoon' ? 'Tardes' : '');
+}
+
 function pcs_phone_href(string $phone): string
 {
     $digits = preg_replace('/\D/', '', $phone) ?? '';
@@ -420,6 +425,8 @@ header('Referrer-Policy: no-referrer');
     .quick { display: flex; gap: 8px; margin-top: 10px; }
     .quick a { flex: 1; }
     .move { margin-top: 10px; }
+    .tag { display: inline-flex; align-items: center; min-height: 24px; margin: 8px 6px 0 0; padding: 0 8px; border-radius: 999px; background: #e5f4f2; color: #0a7b71; font-size: 0.78rem; }
+    .tag.warn { background: #f3e6cf; color: #6a4b16; }
     .empty { margin: 14px 0 0; color: #5e675e; }
     .flash { margin: 0 0 12px; }
     .backdrop { position: fixed; inset: 0; background: rgba(28, 33, 28, 0.46); z-index: 20; }
@@ -570,13 +577,24 @@ header('Referrer-Policy: no-referrer');
             <?php foreach ($columnLeads as $lead): ?>
               <?php
                 $id = (int) $lead['id'];
-                $phoneHref = pcs_phone_href((string) $lead['phone']);
-                $whatsapp = pcs_lead_whatsapp((string) $lead['phone'], (string) $lead['name']);
-                $search = mb_strtolower((string) $lead['name'] . ' ' . (string) $lead['phone'] . ' ' . (string) ($lead['utm_source'] ?? '') . ' ' . (string) ($lead['utm_campaign'] ?? '') . ' ' . (string) ($lead['referrer'] ?? ''));
+                $rawName = trim((string) ($lead['name'] ?? ''));
+                $rawPhone = (string) ($lead['phone'] ?? '');
+                $displayName = $rawName !== '' ? $rawName : 'Sin nombre';
+                $preferenceLabel = pcs_preference_label($lead['preference'] ?? '');
+                $partial = ($lead['status'] ?? '') === 'partial';
+                $phoneHref = pcs_phone_href($rawPhone);
+                $whatsapp = pcs_lead_whatsapp($rawPhone, $rawName);
+                $search = mb_strtolower($displayName . ' ' . $rawPhone . ' ' . $preferenceLabel . ' ' . (string) ($lead['utm_source'] ?? '') . ' ' . (string) ($lead['utm_campaign'] ?? '') . ' ' . (string) ($lead['referrer'] ?? ''));
               ?>
               <article class="lead" draggable="false" data-lead="<?= $id ?>" data-search="<?= h($search) ?>">
-                <h3><a href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>"><?= h((string) $lead['name']) ?></a></h3>
+                <h3><a href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>"><?= h($displayName) ?></a></h3>
                 <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?></p>
+                <?php if ($preferenceLabel !== '' || $partial): ?>
+                  <p>
+                    <?php if ($preferenceLabel !== ''): ?><span class="tag"><?= h($preferenceLabel) ?></span><?php endif; ?>
+                    <?php if ($partial): ?><span class="tag warn">Incompleta</span><?php endif; ?>
+                  </p>
+                <?php endif; ?>
                 <p class="meta"><?= h(pcs_origin_label($lead)) ?></p>
                 <div class="quick">
                   <?php if ($phoneHref !== ''): ?><a class="btn ghost small" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
@@ -605,21 +623,27 @@ header('Referrer-Policy: no-referrer');
     <?php
       $openId = (int) $openLead['id'];
       $openStage = (int) ($openLead['stage_id'] ?? $activeStage);
-      $phoneHref = pcs_phone_href((string) $openLead['phone']);
-      $whatsapp = pcs_lead_whatsapp((string) $openLead['phone'], (string) $openLead['name']);
+      $openName = trim((string) ($openLead['name'] ?? ''));
+      $openPhone = (string) ($openLead['phone'] ?? '');
+      $openPreference = pcs_preference_label($openLead['preference'] ?? '');
+      $openPartial = ($openLead['status'] ?? '') === 'partial';
+      $phoneHref = pcs_phone_href($openPhone);
+      $whatsapp = pcs_lead_whatsapp($openPhone, $openName);
     ?>
     <a class="backdrop" href="<?= h(pcs_admin_url(['stage' => $activeStage])) ?>" aria-label="Cerrar ficha"></a>
     <section class="drawer" role="dialog" aria-modal="true" aria-labelledby="lead-title">
       <div class="drawer-top">
         <a class="btn ghost small" href="<?= h(pcs_admin_url(['stage' => $activeStage])) ?>">Cerrar</a>
       </div>
-      <h2 id="lead-title"><?= h((string) $openLead['name']) ?></h2>
+      <h2 id="lead-title"><?= h($openName !== '' ? $openName : 'Sin nombre') ?></h2>
       <div class="quick">
         <?php if ($phoneHref !== ''): ?><a class="btn" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
         <?php if ($whatsapp !== ''): ?><a class="btn ghost" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
       </div>
       <ul class="facts">
-        <li><?= h((string) $openLead['phone']) ?></li>
+        <li><?= h($openPhone !== '' ? $openPhone : 'Sin teléfono') ?></li>
+        <li><?= h($openPreference !== '' ? $openPreference : 'Sin franja') ?></li>
+        <li><?= $openPartial ? 'Solicitud incompleta' : 'Solicitud completa' ?></li>
         <li><?= h((string) (($openLead['email'] ?? '') !== '' && $openLead['email'] !== null ? $openLead['email'] : 'Sin email')) ?></li>
         <li><?= h(strtoupper((string) $openLead['locale'])) ?> · <?= h((string) (($openLead['page'] ?? '') !== '' && $openLead['page'] !== null ? $openLead['page'] : 'Página no indicada')) ?></li>
         <li>Entró el <?= h(pcs_when((string) $openLead['created_at'])) ?></li>

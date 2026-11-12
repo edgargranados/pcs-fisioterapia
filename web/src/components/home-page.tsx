@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BookButton } from "@/components/appointment-wizard";
 import { BookForm } from "@/components/book-form";
 import { MobileCtaBar } from "@/components/mobile-cta-bar";
 import { FaqList } from "@/components/faq-list";
@@ -27,7 +28,7 @@ export function HomePage({ locale }: { locale: Locale }) {
   return (
     <SiteShell locale={locale} alternateHref={alternate} hideMobileCta>
       <JsonLd data={faqJsonLd(copy.homeFaq)} />
-      <section className="home-hero relative overflow-hidden bg-[#141815] text-[#f6f3ec]">
+      <section className="hero-screen home-hero relative overflow-hidden bg-[#141815] text-[#f6f3ec]">
         <Image
           src="/media/hero-poster.jpg"
           alt=""
@@ -54,18 +55,15 @@ export function HomePage({ locale }: { locale: Locale }) {
           </h1>
           <p className="mt-6 max-w-xl text-base leading-7 text-[#f6f3ec]/90 sm:text-lg">{copy.heroLede}</p>
           <div className="mt-8">
-            <Link
-              href="#cita"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 text-base font-medium text-primary-foreground hover:bg-[#08685f]"
-            >
+            <BookButton className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 text-base font-medium text-primary-foreground hover:bg-[#08685f]">
               {copy.heroCta}
-            </Link>
+            </BookButton>
           </div>
           <p className="mt-8 text-sm tracking-wide text-[#f6f3ec]/85">{copy.heroPlace}</p>
         </div>
       </section>
 
-      <MobileCtaBar href="#cita" label={copy.book} dock="under-hero" />
+      <MobileCtaBar label={copy.book} dock="under-hero" />
 
       <section id="pol" className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-20 md:grid-cols-12 md:py-28">
         <div className="relative aspect-[4/5] overflow-hidden rounded-[1.8rem] md:col-span-5">

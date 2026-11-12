@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { BookButton } from "@/components/appointment-wizard";
 import { Button } from "@/components/ui/button";
 
 type Item = { href: string; label: string };
@@ -61,13 +62,12 @@ export function MobileMenu({
                 </Link>
               ))}
             </nav>
-            <Link
-              href={cta.href}
-              onClick={() => setOpen(false)}
+            <BookButton
+              onOpen={() => setOpen(false)}
               className="mt-8 flex h-12 items-center justify-center rounded-full bg-primary px-6 text-primary-foreground"
             >
               {cta.label}
-            </Link>
+            </BookButton>
             <Link
               href={lang.href}
               hrefLang={lang.href.startsWith("/ca") ? "ca" : "es"}

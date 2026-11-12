@@ -149,12 +149,14 @@ summary::-webkit-details-marker {
   --mobile-cta-height: calc(0.75rem + 3rem + 0.75rem + 1px);
 }
 
+.hero-screen,
 .home-hero {
   height: calc(100svh - var(--site-header-height) - var(--mobile-cta-height));
   height: calc(100dvh - var(--site-header-height) - var(--mobile-cta-height));
 }
 
 @media (min-width: 768px) {
+  .hero-screen,
   .home-hero {
     height: calc(100svh - var(--site-header-height));
     height: calc(100dvh - var(--site-header-height));

@@ -28,6 +28,7 @@ const attributionColumns = [
 ] as const;
 
 let attributionReady = false;
+let wizardReady = false;
 
 export async function ensureLeadAttribution() {
   if (attributionReady) return;
@@ -35,6 +36,16 @@ export async function ensureLeadAttribution() {
     await sql(`alter table leads add column if not exists ${column} text`);
   }
   attributionReady = true;
+}
+
+export async function ensureLeadWizard() {
+  if (wizardReady) return;
+  await sql("alter table leads add column if not exists preference text");
+  await sql("alter table leads add column if not exists status text not null default 'complete'");
+  await sql("alter table leads add column if not exists resume_token text");
+  await sql("alter table leads alter column name drop not null");
+  await sql("alter table leads alter column phone drop not null");
+  wizardReady = true;
 }
 
 export async function sql<T = Record<string, unknown>>(

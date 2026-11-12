@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { BookButton } from "@/components/appointment-wizard";
 
 export function MobileCtaBar({
-  href,
   label,
   dock = "fixed",
 }: {
-  href: string;
   label: string;
   dock?: "fixed" | "under-hero";
 }) {
@@ -37,12 +35,9 @@ export function MobileCtaBar({
 
   const bar = (
     <div className={`mobile-cta backdrop-blur md:hidden ${pinned ? "is-pinned" : ""}`}>
-      <Link
-        href={href}
-        className="flex h-12 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground"
-      >
+      <BookButton className="flex h-12 w-full items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
         {label}
-      </Link>
+      </BookButton>
     </div>
   );
 
