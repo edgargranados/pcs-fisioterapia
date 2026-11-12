@@ -34,7 +34,7 @@ export function HomePage({ locale }: { locale: Locale }) {
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="object-cover object-[center_30%]"
         />
         <HeroVideo />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,20,17,0.45)_0%,rgba(16,20,17,0.22)_42%,rgba(16,20,17,0.55)_100%)]" />
