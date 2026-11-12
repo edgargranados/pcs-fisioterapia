@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,13 +22,65 @@ export function MobileMenu({
   closeLabel: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  const panel =
+    open && mounted
+      ? createPortal(
+          <div
+            id="mobile-menu"
+            className="fixed inset-x-0 bottom-0 top-[4.5rem] z-[70] overflow-y-auto overscroll-contain bg-background px-5 pb-8 pt-2"
+          >
+            <nav className="grid" aria-label={openLabel}>
+              {links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="border-b border-border py-4 font-serif text-2xl tracking-tight"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+            <Link
+              href={cta.href}
+              onClick={() => setOpen(false)}
+              className="mt-8 flex h-12 items-center justify-center rounded-full bg-primary px-6 text-primary-foreground"
+            >
+              {cta.label}
+            </Link>
+            <Link
+              href={lang.href}
+              hrefLang={lang.href.startsWith("/ca") ? "ca" : "es"}
+              aria-label={lang.aria}
+              className="mt-6 block py-2 text-sm text-muted-foreground"
+              onClick={() => setOpen(false)}
+            >
+              {lang.label}
+            </Link>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <div className="lg:hidden">
@@ -37,37 +90,13 @@ export function MobileMenu({
         size="icon"
         className="size-11 rounded-full"
         aria-expanded={open}
+        aria-controls="mobile-menu"
         aria-label={open ? closeLabel : openLabel}
         onClick={() => setOpen((value) => !value)}
       >
         {open ? <X /> : <Menu />}
       </Button>
-      {open ? (
-        <div className="fixed inset-0 top-[4.5rem] z-40 overflow-y-auto bg-background px-5 pb-28 pt-6">
-          <nav className="grid gap-2">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="border-b border-border py-4 font-serif text-3xl tracking-tight"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <Link
-            href={cta.href}
-            onClick={() => setOpen(false)}
-            className="mt-8 inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 text-primary-foreground"
-          >
-            {cta.label}
-          </Link>
-          <Link href={lang.href} hrefLang={lang.href.startsWith("/ca") ? "ca" : "es"} aria-label={lang.aria} className="mt-6 block text-sm text-muted-foreground" onClick={() => setOpen(false)}>
-            {lang.label}
-          </Link>
-        </div>
-      ) : null}
+      {panel}
     </div>
   );
 }
