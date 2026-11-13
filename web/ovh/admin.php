@@ -660,16 +660,16 @@ header('Referrer-Policy: no-referrer');
               ?>
               <article class="lead" data-lead="<?= $id ?>" data-search="<?= h($search) ?>">
                 <div class="lead-top">
-                  <a class="lead-main" href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>">
+                  <a class="lead-main" draggable="false" href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>">
                     <h3><?= h($displayName) ?></h3>
                     <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?><?php if ($preferenceLabel !== ''): ?> · <?= h($preferenceLabel) ?><?php endif; ?><?php if ($partial): ?> · Incompleta<?php endif; ?> · <?= h(pcs_origin_label($lead)) ?></p>
                   </a>
-                  <span class="drag" draggable="true" title="Arrastrar a otra etapa">⠿</span>
+                  <span class="drag" title="Arrastrar a otra etapa">⠿</span>
                 </div>
                 <div class="quick">
                   <button type="button" class="btn ghost small" data-move aria-expanded="false" aria-controls="move-<?= $id ?>">Mover</button>
-                  <?php if ($phoneHref !== ''): ?><a class="btn ghost small" data-touch="call" data-lead="<?= $id ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
-                  <?php if ($whatsapp !== ''): ?><a class="btn ghost small" data-touch="whatsapp" data-lead="<?= $id ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
+                  <?php if ($phoneHref !== ''): ?><a class="btn ghost small" draggable="false" data-touch="call" data-lead="<?= $id ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
+                  <?php if ($whatsapp !== ''): ?><a class="btn ghost small" draggable="false" data-touch="whatsapp" data-lead="<?= $id ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
                 </div>
                 <form method="post" class="move" id="move-<?= $id ?>">
                   <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
@@ -854,24 +854,40 @@ header('Referrer-Policy: no-referrer');
     });
     const desktop = window.matchMedia("(min-width: 900px)").matches;
     if (desktop) {
-      document.querySelectorAll(".drag").forEach((handle) => {
-        handle.addEventListener("dragstart", (event) => {
-          const card = handle.closest("[data-lead]");
-          event.dataTransfer.setData("text/plain", card?.getAttribute("data-lead") || "");
+      const leadIdFrom = (transfer) => {
+        const custom = transfer.getData("application/x-pcs-lead");
+        const plain = transfer.getData("text/plain");
+        const value = custom || plain;
+        return /^\d+$/.test(value) ? value : "";
+      };
+      document.querySelectorAll("[data-lead]").forEach((card) => {
+        card.draggable = true;
+        card.addEventListener("dragstart", (event) => {
+          if (event.target instanceof Element && event.target.closest("button, input, select, textarea, .quick")) {
+            event.preventDefault();
+            return;
+          }
+          const id = card.getAttribute("data-lead") || "";
+          event.dataTransfer.setData("application/x-pcs-lead", id);
+          event.dataTransfer.setData("text/plain", id);
           event.dataTransfer.effectAllowed = "move";
         });
       });
       document.querySelectorAll("[data-stage]").forEach((column) => {
         column.addEventListener("dragover", (event) => {
           event.preventDefault();
+          if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
           column.classList.add("over");
         });
-        column.addEventListener("dragleave", () => column.classList.remove("over"));
+        column.addEventListener("dragleave", (event) => {
+          if (event.relatedTarget instanceof Node && column.contains(event.relatedTarget)) return;
+          column.classList.remove("over");
+        });
         column.addEventListener("drop", (event) => {
           event.preventDefault();
           column.classList.remove("over");
-          const leadId = event.dataTransfer.getData("text/plain");
-          if (!leadId) return;
+          const leadId = leadIdFrom(event.dataTransfer);
+          if (!leadId || cardIsHere(column, leadId)) return;
           const form = document.createElement("form");
           form.method = "post";
           const fields = {
@@ -892,6 +908,10 @@ header('Referrer-Policy: no-referrer');
           form.submit();
         });
       });
+      function cardIsHere(column, leadId) {
+        const card = document.querySelector('[data-lead="' + leadId + '"]');
+        return Boolean(card && column.contains(card));
+      }
     }
   </script>
 <?php endif; ?>
