@@ -426,6 +426,9 @@ function pcs_ensure_crm(PDO $db): void
     if (!pcs_column_exists($db, 'leads', 'stage_id')) {
         $db->exec('ALTER TABLE leads ADD COLUMN stage_id INT UNSIGNED NULL, ADD KEY leads_stage_idx (stage_id)');
     }
+    if (!pcs_column_exists($db, 'leads', 'sort_order')) {
+        $db->exec('ALTER TABLE leads ADD COLUMN sort_order INT NOT NULL DEFAULT 0, ADD KEY leads_sort_idx (stage_id, sort_order)');
+    }
     pcs_ensure_attribution($db);
     pcs_ensure_wizard($db);
     $count = (int) $db->query('SELECT COUNT(*) FROM stages')->fetchColumn();
@@ -440,6 +443,18 @@ function pcs_ensure_crm(PDO $db): void
     if ($first !== false) {
         $assign = $db->prepare('UPDATE leads SET stage_id = ? WHERE stage_id IS NULL');
         $assign->execute([(int) $first]);
+    }
+    $unordered = (int) $db->query('SELECT COUNT(*) FROM leads WHERE sort_order = 0')->fetchColumn();
+    $total = (int) $db->query('SELECT COUNT(*) FROM leads')->fetchColumn();
+    if ($total > 1 && $unordered === $total) {
+        $select = $db->prepare('SELECT id FROM leads WHERE stage_id = ? ORDER BY created_at DESC, id DESC');
+        $update = $db->prepare('UPDATE leads SET sort_order = ? WHERE id = ?');
+        foreach ($db->query('SELECT id FROM stages')->fetchAll(PDO::FETCH_COLUMN) as $stageId) {
+            $select->execute([(int) $stageId]);
+            foreach ($select->fetchAll(PDO::FETCH_COLUMN) as $order => $id) {
+                $update->execute([(int) $order, (int) $id]);
+            }
+        }
     }
 }
 

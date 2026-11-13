@@ -30,9 +30,11 @@ CREATE TABLE IF NOT EXISTS leads (
   msclkid VARCHAR(200) NULL,
   ttclid VARCHAR(200) NULL,
   stage_id INT UNSIGNED NULL,
+  sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY leads_created_at_idx (created_at),
-  KEY leads_stage_idx (stage_id)
+  KEY leads_stage_idx (stage_id),
+  KEY leads_sort_idx (stage_id, sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS lead_notes (
