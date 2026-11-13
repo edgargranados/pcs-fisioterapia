@@ -389,6 +389,41 @@ function pcs_crm_action(PDO $db, array $post): array
         return ['error' => '', 'ok' => '', 'query' => ['stage' => (int) ($post['back_stage'] ?? 0), 'lead' => $leadId], 'ajax' => $ajax];
     }
 
+    if ($action === 'update_lead') {
+        $field = (string) ($post['field'] ?? '');
+        $value = trim(str_replace(["\r", "\n"], ' ', (string) ($post['value'] ?? '')));
+        $labels = ['name' => 'el nombre', 'email' => 'el email', 'phone' => 'el teléfono'];
+        if (!isset($labels[$field])) {
+            return $fail('No se ha podido guardar el dato.');
+        }
+        if ($field === 'name' && mb_strlen($value) > 80) {
+            return $fail('El nombre puede tener hasta 80 caracteres.');
+        }
+        if ($field === 'email' && ($value !== '' && filter_var($value, FILTER_VALIDATE_EMAIL) === false || mb_strlen($value) > 120)) {
+            return $fail('El email no es válido.');
+        }
+        if ($field === 'phone' && ($value !== '' && preg_match('/^[0-9+().\\s-]{1,20}$/', $value) !== 1)) {
+            return $fail('El teléfono no es válido.');
+        }
+        $column = $field === 'name' ? 'name' : ($field === 'email' ? 'email' : 'phone');
+        $current = $db->prepare('SELECT ' . $column . ', stage_id FROM leads WHERE id = ?');
+        $current->execute([$leadId]);
+        $row = $current->fetch();
+        if ($row === false) {
+            return $fail('Ese lead ya no está.');
+        }
+        $previous = trim((string) ($row[$column] ?? ''));
+        if ($previous !== $value) {
+            $db->prepare('UPDATE leads SET ' . $column . ' = ? WHERE id = ?')->execute([$value === '' ? null : $value, $leadId]);
+            pcs_log_event($db, $leadId, 'edit', $labels[$field]);
+        }
+        return [
+            'error' => '',
+            'ok' => '',
+            'query' => ['stage' => (int) ($row['stage_id'] ?? $post['back_stage'] ?? 0), 'lead' => $leadId],
+        ];
+    }
+
     if ($action === 'delete_lead') {
         if ($leadId < 1) {
             return $fail('No se ha podido eliminar el lead.');
@@ -421,6 +456,64 @@ function pcs_when(string $value): string
     }
     $months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
     return $date->format('j') . '-' . $months[(int) $date->format('n') - 1];
+}
+
+function pcs_day_heading(string $value): string
+{
+    try {
+        $date = new DateTimeImmutable($value);
+    } catch (Throwable) {
+        return $value;
+    }
+    $today = new DateTimeImmutable('today');
+    $day = $date->setTime(0, 0);
+    if ($day == $today) {
+        return 'Hoy';
+    }
+    if ($day == $today->modify('-1 day')) {
+        return 'Ayer';
+    }
+    return pcs_when($value);
+}
+
+function pcs_ago(string $value): string
+{
+    try {
+        $date = new DateTimeImmutable($value);
+    } catch (Throwable) {
+        return $value;
+    }
+    $now = new DateTimeImmutable();
+    $diff = $now->getTimestamp() - $date->getTimestamp();
+    if ($diff < 60) {
+        return 'ahora';
+    }
+    if ($date->format('Y-m-d') === $now->format('Y-m-d')) {
+        if ($diff < 3600) {
+            return 'hace ' . intdiv($diff, 60) . ' min';
+        }
+        $hours = intdiv($diff, 3600);
+        return 'hace ' . $hours . ' h';
+    }
+    $yesterday = $now->modify('-1 day')->format('Y-m-d');
+    if ($date->format('Y-m-d') === $yesterday) {
+        return 'ayer';
+    }
+    return pcs_when($value);
+}
+
+function pcs_activity_icon(string $kind): string
+{
+    $paths = [
+        'call' => '<path d="M8 3h2l1 4-2 1a11 11 0 0 0 6 6l1-2 4 1v2a2 2 0 0 1-2 2A15 15 0 0 1 6 5a2 2 0 0 1 2-2z"/>',
+        'whatsapp' => '<path d="M5 18l1-3a8 8 0 1 1 3 3z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>',
+        'stage' => '<path d="M5 4h9l-1 4 1 4H5z"/><path d="M5 4v16"/>',
+        'edit' => '<path d="M4 20h4l10-10-4-4L4 16z"/><path d="M12 6l4 4"/>',
+        'created' => '<circle cx="12" cy="8" r="3"/><path d="M6 19c1.5-3 3.5-4 6-4s4.5 1 6 4"/>',
+        'note' => '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 16h6"/>',
+    ];
+    $path = $paths[$kind] ?? $paths['note'];
+    return '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
 }
 
 function pcs_preference_label(mixed $value): string
@@ -539,9 +632,28 @@ header('Referrer-Policy: no-referrer');
     .backdrop { position: fixed; inset: 0; background: rgba(28, 33, 28, 0.46); z-index: 20; }
     .drawer { position: fixed; z-index: 21; inset: 0; overflow: auto; background: #f4efe6; padding: 16px 16px 40px; }
     .drawer-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .drawer h2 { margin: 8px 0 0; font-size: 1.8rem; letter-spacing: -0.03em; }
-    .facts { margin: 14px 0; padding: 0; list-style: none; }
-    .facts li { padding: 8px 0; border-top: 1px solid #e4dccf; }
+    .drawer h2 { margin: 0; font-size: 1.8rem; letter-spacing: -0.03em; }
+    .sheet { display: grid; gap: 28px; margin-top: 18px; }
+    .prop { margin-top: 16px; }
+    .prop-label { margin: 0 0 2px; font-size: 0.78rem; font-weight: 650; }
+    .prop-value { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: text; }
+    .prop-value.is-empty { color: #8a918a; }
+    .prop-name { margin-top: 12px; }
+    .prop-form input { display: block; width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; min-height: 0; outline: none; font: inherit; }
+    .prop-name .prop-value, .prop-name .prop-form input { font-size: 1.8rem; font-weight: 560; letter-spacing: -0.03em; line-height: 1.15; }
+    .prop-static { margin: 0; }
+    .sheet-side { min-width: 0; }
+    .history { margin-top: 28px; }
+    .day { margin: 16px 0 8px; color: #8a918a; font-size: 0.8rem; }
+    .activity { list-style: none; margin: 0; padding: 0; }
+    .activity li { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: stretch; }
+    .rail { display: flex; flex-direction: column; align-items: center; }
+    .activity-icon { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 10px; background: #fff; border: 1px solid #e4dccf; color: #0a7b71; }
+    .rail .line { width: 2px; flex: 1; min-height: 16px; margin-top: 4px; background: #e4dccf; }
+    .activity li:last-child .line { display: none; }
+    .activity strong { display: block; margin-top: 5px; font-size: 0.95rem; }
+    .activity .sub { margin: 2px 0 12px; color: #5e675e; font-size: 0.85rem; white-space: pre-wrap; }
+    .activity time { margin-top: 6px; color: #8a918a; font-size: 0.78rem; white-space: nowrap; }
     .stage-picks { display: flex; flex-wrap: wrap; gap: 8px; }
     .stage-picks button.is-on { background: #1c211c; }
     .drawer h3 { margin: 18px 0 8px; font-size: 0.95rem; }
@@ -573,7 +685,8 @@ header('Referrer-Policy: no-referrer');
       .column-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 14px 14px; }
       .drag { display: grid; place-items: center; width: 28px; height: 36px; cursor: grab; color: #5e675e; user-select: none; }
       .quick [data-move] { display: none; }
-      .drawer { inset: 0 0 0 auto; width: min(480px, 100%); padding: 36px 40px 56px; box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
+      .drawer { inset: 0 0 0 auto; width: min(960px, calc(100vw - 48px)); padding: 36px 40px 56px; box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
+      .sheet { grid-template-columns: minmax(240px, 0.85fr) minmax(280px, 1.15fr); gap: 40px; align-items: start; }
     }
   </style>
 </head>
@@ -765,7 +878,8 @@ header('Referrer-Policy: no-referrer');
       $openId = (int) $openLead['id'];
       $openStage = (int) ($openLead['stage_id'] ?? $activeStage);
       $openName = trim((string) ($openLead['name'] ?? ''));
-      $openPhone = (string) ($openLead['phone'] ?? '');
+      $openPhone = trim((string) ($openLead['phone'] ?? ''));
+      $openEmail = trim((string) ($openLead['email'] ?? ''));
       $openPreference = pcs_preference_label($openLead['preference'] ?? '');
       $openPartial = ($openLead['status'] ?? '') === 'partial';
       $phoneHref = pcs_phone_href($openPhone);
@@ -776,97 +890,143 @@ header('Referrer-Policy: no-referrer');
       <div class="drawer-top">
         <a class="btn ghost small" href="<?= h(pcs_admin_url(['stage' => $activeStage])) ?>">Cerrar</a>
       </div>
-      <h2 id="lead-title"><?= h($openName !== '' ? $openName : 'Sin nombre') ?></h2>
-      <div class="quick">
-        <?php if ($phoneHref !== ''): ?><a class="btn" data-touch="call" data-lead="<?= $openId ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
-        <?php if ($whatsapp !== ''): ?><a class="btn ghost" data-touch="whatsapp" data-lead="<?= $openId ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
-      </div>
-      <ul class="facts">
-        <li><?= h($openPhone !== '' ? $openPhone : 'Sin teléfono') ?></li>
-        <li><?= h($openPreference !== '' ? $openPreference : 'Sin franja') ?></li>
-        <li><?= $openPartial ? 'Solicitud incompleta' : 'Solicitud completa' ?></li>
-        <li><?= h((string) (($openLead['email'] ?? '') !== '' && $openLead['email'] !== null ? $openLead['email'] : 'Sin email')) ?></li>
-        <li><?= h(strtoupper((string) $openLead['locale'])) ?> · <?= h((string) (($openLead['page'] ?? '') !== '' && $openLead['page'] !== null ? $openLead['page'] : 'Página no indicada')) ?></li>
-        <li>Se registró el <?= h(pcs_when((string) $openLead['created_at'])) ?></li>
-      </ul>
-      <h3>Etapa</h3>
-      <div class="stage-picks">
-        <?php foreach ($stages as $option): ?>
-          <form method="post">
-            <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
-            <input type="hidden" name="action" value="move_lead">
-            <input type="hidden" name="lead_id" value="<?= $openId ?>">
-            <input type="hidden" name="stage_id" value="<?= (int) $option['id'] ?>">
-            <input type="hidden" name="keep_lead" value="1">
-            <button class="btn small<?= (int) $option['id'] === $openStage ? ' is-on' : ' ghost' ?>" type="submit"><?= h((string) $option['name']) ?></button>
-          </form>
-        <?php endforeach; ?>
-      </div>
-      <h3>Historial</h3>
-      <form method="post" class="composer">
-        <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
-        <input type="hidden" name="action" value="add_note">
-        <input type="hidden" name="lead_id" value="<?= $openId ?>">
-        <label for="note-body">Añadir nota</label>
-        <textarea id="note-body" name="body" maxlength="2000" required placeholder="Qué has hablado, cuándo vuelve, qué hay que mirar…"></textarea>
-        <p><button class="btn" type="submit">Guardar nota</button></p>
-      </form>
-      <?php
-        $timeline = [[
-            'at' => (string) $openLead['created_at'],
-            'kind' => 'created',
-            'detail' => pcs_origin_label($openLead),
-        ]];
-        foreach ($notes as $note) {
-            $timeline[] = ['at' => (string) $note['created_at'], 'kind' => 'note', 'detail' => (string) $note['body']];
-        }
-        foreach ($events as $event) {
-            if ((string) $event['kind'] === 'note') {
-                continue;
-            }
-            $timeline[] = [
-                'at' => (string) $event['created_at'],
-                'kind' => (string) $event['kind'],
-                'detail' => (string) ($event['detail'] ?? ''),
+      <div class="sheet">
+        <div>
+          <?php
+            $editable = [
+                ['name', 'Nombre', $openName, 'Sin nombre', 'text', 80, true],
+                ['email', 'Email', $openEmail, 'Añadir email', 'email', 120, false],
+                ['phone', 'Teléfono', $openPhone, 'Añadir teléfono', 'tel', 20, false],
             ];
-        }
-        usort($timeline, static function (array $a, array $b): int {
-            return strcmp($b['at'], $a['at']);
-        });
-        $eventLabels = [
-            'created' => 'Se registró',
-            'stage' => 'Cambió de etapa',
-            'note' => 'Nota',
-            'call' => 'Se ha llamado',
-            'whatsapp' => 'Se ha enviado WhatsApp',
-        ];
-      ?>
-      <ol class="log">
-      <?php foreach ($timeline as $item): ?>
+          ?>
+          <?php foreach ($editable as [$field, $label, $value, $empty, $type, $max, $isName]): ?>
+            <div class="prop<?= $isName ? ' prop-name' : '' ?>">
+              <?php if (!$isName): ?><p class="prop-label"><?= h($label) ?></p><?php endif; ?>
+              <button type="button" class="prop-value<?= $value === '' ? ' is-empty' : '' ?>" <?= $isName ? 'id="lead-title"' : '' ?> data-edit-field data-value="<?= h($value) ?>"><?= h($value !== '' ? $value : $empty) ?></button>
+              <form method="post" class="prop-form" hidden>
+                <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+                <input type="hidden" name="action" value="update_lead">
+                <input type="hidden" name="field" value="<?= h($field) ?>">
+                <input type="hidden" name="lead_id" value="<?= $openId ?>">
+                <input type="hidden" name="back_stage" value="<?= (int) $openStage ?>">
+                <input type="hidden" name="back_lead" value="<?= $openId ?>">
+                <label class="sr" for="edit-<?= h($field) ?>" style="position:absolute;left:-999px"><?= h($label) ?></label>
+                <input id="edit-<?= h($field) ?>" name="value" type="<?= h($type) ?>" maxlength="<?= (int) $max ?>" value="<?= h($value) ?>" autocomplete="off">
+              </form>
+            </div>
+          <?php endforeach; ?>
+          <div class="quick">
+            <?php if ($phoneHref !== ''): ?><a class="btn" data-touch="call" data-lead="<?= $openId ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
+            <?php if ($whatsapp !== ''): ?><a class="btn ghost" data-touch="whatsapp" data-lead="<?= $openId ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
+          </div>
+          <div class="prop">
+            <p class="prop-label">Franja</p>
+            <p class="prop-static"><?= h($openPreference !== '' ? $openPreference : 'Sin franja') ?></p>
+          </div>
+          <div class="prop">
+            <p class="prop-label">Estado</p>
+            <p class="prop-static"><?= $openPartial ? 'Solicitud incompleta' : 'Solicitud completa' ?></p>
+          </div>
+          <div class="prop">
+            <p class="prop-label">Se registró</p>
+            <p class="prop-static"><?= h(pcs_when((string) $openLead['created_at'])) ?> · <?= h(pcs_origin_label($openLead) === 'Directo' ? 'canal directo' : pcs_origin_label($openLead)) ?></p>
+          </div>
+        </div>
+        <div class="sheet-side">
+          <h3>Etapa</h3>
+          <div class="stage-picks">
+            <?php foreach ($stages as $option): ?>
+              <form method="post">
+                <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+                <input type="hidden" name="action" value="move_lead">
+                <input type="hidden" name="lead_id" value="<?= $openId ?>">
+                <input type="hidden" name="stage_id" value="<?= (int) $option['id'] ?>">
+                <input type="hidden" name="keep_lead" value="1">
+                <button class="btn small<?= (int) $option['id'] === $openStage ? ' is-on' : ' ghost' ?>" type="submit"><?= h((string) $option['name']) ?></button>
+              </form>
+            <?php endforeach; ?>
+          </div>
+          <h3>Notas</h3>
+          <form method="post" class="composer">
+            <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+            <input type="hidden" name="action" value="add_note">
+            <input type="hidden" name="lead_id" value="<?= $openId ?>">
+            <label for="note-body">Añadir nota</label>
+            <textarea id="note-body" name="body" maxlength="2000" required placeholder="Qué has hablado, cuándo vuelve, qué hay que mirar…"></textarea>
+            <p><button class="btn" type="submit">Guardar nota</button></p>
+          </form>
+        </div>
+      </div>
+      <section class="history">
+        <h3>Historial</h3>
         <?php
-          $kind = (string) $item['kind'];
-          $detail = trim((string) $item['detail']);
-          $label = $eventLabels[$kind] ?? $kind;
-          if ($kind === 'created' && $detail !== '') {
-              if ($detail === 'Directo') {
-                  $detail = 'canal directo';
+          $timeline = [[
+              'at' => (string) $openLead['created_at'],
+              'kind' => 'created',
+              'detail' => pcs_origin_label($openLead),
+          ]];
+          foreach ($notes as $note) {
+              $timeline[] = ['at' => (string) $note['created_at'], 'kind' => 'note', 'detail' => (string) $note['body']];
+          }
+          foreach ($events as $event) {
+              if ((string) $event['kind'] === 'note') {
+                  continue;
               }
-              $label .= ' - ' . $detail;
-              $detail = '';
-          } elseif ($kind === 'stage' && $detail !== '') {
-              $label .= ': ' . $detail;
-              $detail = '';
-          } elseif ($kind === 'note' && $detail !== '') {
-              $label .= ' · ' . $detail;
-              $detail = '';
+              $timeline[] = [
+                  'at' => (string) $event['created_at'],
+                  'kind' => (string) $event['kind'],
+                  'detail' => (string) ($event['detail'] ?? ''),
+              ];
+          }
+          usort($timeline, static function (array $a, array $b): int {
+              return strcmp($b['at'], $a['at']);
+          });
+          $groups = [];
+          foreach ($timeline as $item) {
+              $groups[pcs_day_heading((string) $item['at'])][] = $item;
           }
         ?>
-        <li>
-          <time datetime="<?= h((string) $item['at']) ?>"><?= h(pcs_when((string) $item['at'])) ?></time>
-          <p><?= nl2br(h($label)) ?></p>
-        </li>
-      <?php endforeach; ?>
-      </ol>
+        <?php foreach ($groups as $day => $items): ?>
+          <p class="day"><?= h($day) ?></p>
+          <ol class="activity">
+            <?php foreach ($items as $item): ?>
+              <?php
+                $kind = (string) $item['kind'];
+                $detail = trim((string) $item['detail']);
+                $title = $kind;
+                $sub = '';
+                if ($kind === 'created') {
+                    $title = 'Se registró';
+                    $sub = $detail === '' || $detail === 'Directo' ? 'canal directo' : $detail;
+                } elseif ($kind === 'stage') {
+                    $title = 'Cambió de etapa';
+                    $sub = $detail;
+                } elseif ($kind === 'note') {
+                    $title = 'Nota';
+                    $sub = $detail;
+                } elseif ($kind === 'call') {
+                    $title = 'Se ha llamado';
+                } elseif ($kind === 'whatsapp') {
+                    $title = 'Se ha enviado WhatsApp';
+                } elseif ($kind === 'edit') {
+                    $title = 'Cambió ' . $detail;
+                }
+              ?>
+              <li>
+                <div class="rail">
+                  <span class="activity-icon"><?= pcs_activity_icon($kind) ?></span>
+                  <span class="line"></span>
+                </div>
+                <div>
+                  <strong><?= h($title) ?></strong>
+                  <?php if ($sub !== ''): ?><p class="sub"><?= nl2br(h($sub)) ?></p><?php endif; ?>
+                </div>
+                <time datetime="<?= h((string) $item['at']) ?>"><?= h(pcs_ago((string) $item['at'])) ?></time>
+              </li>
+            <?php endforeach; ?>
+          </ol>
+        <?php endforeach; ?>
+      </section>
       <div class="danger-row">
         <button type="button" class="btn danger" data-ask-delete>Eliminar lead</button>
       </div>
@@ -1059,6 +1219,48 @@ header('Referrer-Policy: no-referrer');
         }
       });
     }
+    document.querySelectorAll("[data-edit-field]").forEach((button) => {
+      const form = button.parentElement?.querySelector("form");
+      const input = form?.querySelector("input[name=value]");
+      if (!form || !input) return;
+      let skip = false;
+      let saving = false;
+      button.addEventListener("mousedown", (event) => event.preventDefault());
+      button.addEventListener("click", () => {
+        button.hidden = true;
+        form.hidden = false;
+        setTimeout(() => {
+          input.focus();
+          input.select();
+        }, 0);
+      });
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          input.blur();
+          return;
+        }
+        if (event.key !== "Escape") return;
+        skip = true;
+        input.value = button.getAttribute("data-value") || "";
+        form.hidden = true;
+        button.hidden = false;
+        button.focus();
+      });
+      input.addEventListener("blur", () => {
+        if (skip || saving) {
+          skip = false;
+          return;
+        }
+        if (input.value.trim() === (button.getAttribute("data-value") || "")) {
+          form.hidden = true;
+          button.hidden = false;
+          return;
+        }
+        saving = true;
+        form.submit();
+      });
+    });
   </script>
 <?php endif; ?>
 </body>
