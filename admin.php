@@ -462,7 +462,7 @@ header('Referrer-Policy: no-referrer');
     .pills a.is-on { background: #0a7b71; border-color: #0a7b71; color: #f6f3ec; }
     .pills span { font-size: 0.8rem; opacity: 0.8; }
     .board { display: block; }
-    .column { display: none; padding: 14px; }
+    .column { display: none; padding: 14px; background: #e7f1ef; border-color: #d3e4e1; }
     .column.is-current { display: block; }
     .column-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
     .icon-btn { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 999px; border: 1px solid #d5cbbd; background: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: #1c211c; }
@@ -474,7 +474,7 @@ header('Referrer-Policy: no-referrer');
     details summary { cursor: pointer; color: #0a7b71; font-size: 0.85rem; }
     .edit.is-open { gap: 8px; margin-top: 10px; }
     .row { display: flex; gap: 8px; }
-    .lead { padding: 10px 12px; margin-top: 8px; }
+    .lead { padding: 10px 12px; margin-top: 8px; flex: 0 0 auto; background: #fff; }
     .lead h3 { margin: 0; font-size: 1rem; line-height: 1.25; }
     .lead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
     .lead-main { display: block; min-width: 0; color: inherit; text-decoration: none; }
@@ -482,8 +482,9 @@ header('Referrer-Policy: no-referrer');
     .drag { display: none; }
     .event-kind { margin: 6px 0 0; font-weight: 600; }
     .meta { margin: 2px 0 0; color: #5e675e; font-size: 0.78rem; line-height: 1.3; }
-    .quick { display: flex; gap: 6px; margin-top: 8px; }
-    .quick .btn { flex: 1; min-height: 32px; padding: 0 8px; font-size: 0.8rem; }
+    .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .quick .btn { flex: 1 1 auto; min-height: 32px; padding: 0 8px; font-size: 0.8rem; white-space: nowrap; }
+    .quick [data-move] { flex: 0 0 auto; background: #dff3f1; color: #08685f; border-color: #8fcfc8; }
     .move { display: none; margin-top: 8px; }
     .move.is-open { display: block; }
     .move label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -499,8 +500,11 @@ header('Referrer-Policy: no-referrer');
     .facts li { padding: 8px 0; border-top: 1px solid #e4dccf; }
     .stage-picks { display: flex; flex-wrap: wrap; gap: 8px; }
     .stage-picks button.is-on { background: #1c211c; }
-    .note { padding: 12px 14px; margin-top: 8px; }
-    .note p { margin: 6px 0 0; white-space: pre-wrap; }
+    .drawer h3 { margin: 18px 0 8px; font-size: 0.95rem; }
+    .log { list-style: none; margin: 4px 0 0; padding: 0; }
+    .log li { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 5px 0; border-top: 1px solid #e4dccf; font-size: 0.9rem; line-height: 1.35; }
+    .log time { color: #5e675e; font-size: 0.78rem; }
+    .log p { margin: 0; white-space: pre-wrap; }
     .composer { padding: 12px; margin-top: 8px; }
     .column.over { outline: 2px dashed #0a7b71; outline-offset: 3px; }
     @media (min-width: 900px) {
@@ -712,28 +716,6 @@ header('Referrer-Policy: no-referrer');
         <li><?= h(strtoupper((string) $openLead['locale'])) ?> · <?= h((string) (($openLead['page'] ?? '') !== '' && $openLead['page'] !== null ? $openLead['page'] : 'Página no indicada')) ?></li>
         <li>Entró el <?= h(pcs_when((string) $openLead['created_at'])) ?></li>
       </ul>
-      <h3>De dónde vino</h3>
-      <ul class="facts">
-        <li><?= h(pcs_origin_label($openLead)) ?></li>
-        <?php foreach ([
-            'Campaña' => 'utm_campaign',
-            'Anuncio' => 'utm_content',
-            'Término' => 'utm_term',
-            'Entrada' => 'landing_url',
-            'Procedencia' => 'referrer',
-            'gclid' => 'gclid',
-            'fbclid' => 'fbclid',
-            'gbraid' => 'gbraid',
-            'wbraid' => 'wbraid',
-            'msclkid' => 'msclkid',
-            'ttclid' => 'ttclid',
-        ] as $label => $key): ?>
-          <?php $value = trim((string) ($openLead[$key] ?? '')); ?>
-          <?php if ($value !== ''): ?>
-            <li><span class="muted"><?= h($label) ?></span><br><?= h($value) ?></li>
-          <?php endif; ?>
-        <?php endforeach; ?>
-      </ul>
       <h3>Etapa</h3>
       <div class="stage-picks">
         <?php foreach ($stages as $option): ?>
@@ -782,10 +764,11 @@ header('Referrer-Policy: no-referrer');
             'created' => 'Entró',
             'stage' => 'Cambió de etapa',
             'note' => 'Nota',
-            'call' => 'Llamada',
-            'whatsapp' => 'WhatsApp',
+            'call' => 'Se ha llamado',
+            'whatsapp' => 'Se ha enviado WhatsApp',
         ];
       ?>
+      <ol class="log">
       <?php foreach ($timeline as $item): ?>
         <?php
           $kind = (string) $item['kind'];
@@ -797,14 +780,17 @@ header('Referrer-Policy: no-referrer');
           } elseif ($kind === 'stage' && $detail !== '') {
               $label .= ': ' . $detail;
               $detail = '';
+          } elseif ($kind === 'note' && $detail !== '') {
+              $label .= ' · ' . $detail;
+              $detail = '';
           }
         ?>
-        <article class="note">
-          <time class="muted" datetime="<?= h((string) $item['at']) ?>"><?= h(pcs_when((string) $item['at'])) ?></time>
-          <p class="event-kind"><?= h($label) ?></p>
-          <?php if ($detail !== ''): ?><p><?= nl2br(h($detail)) ?></p><?php endif; ?>
-        </article>
+        <li>
+          <time datetime="<?= h((string) $item['at']) ?>"><?= h(pcs_when((string) $item['at'])) ?></time>
+          <p><?= nl2br(h($label)) ?></p>
+        </li>
       <?php endforeach; ?>
+      </ol>
     </section>
   <?php endif; ?>
   <script>
