@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useId, useRef, useState, createContext, type RefObject } from "react";
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, createContext, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { ui } from "@/content/ui";
@@ -141,6 +141,7 @@ function AppointmentDialog({
   const [errorCode, setErrorCode] = useState<ErrorCode>("");
   const [pending, setPending] = useState<string | null>(null);
   const [whatsappHref, setWhatsappHref] = useState("");
+  const [keyboardFrame, setKeyboardFrame] = useState<{ height: number; top: number; dock: boolean } | null>(null);
 
   const reset = useCallback(() => {
     setStep("preference");
@@ -166,6 +167,42 @@ function AppointmentDialog({
   useEffect(() => {
     closeRef.current = close;
   }, [close]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const update = () => {
+      const narrow = window.matchMedia("(max-width: 639px)").matches;
+      const keyboard = window.innerHeight - viewport.height > 80;
+      if (!narrow && !keyboard) {
+        setKeyboardFrame(null);
+        return;
+      }
+      setKeyboardFrame({ height: viewport.height, top: viewport.offsetTop, dock: narrow });
+    };
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      setKeyboardFrame(null);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!keyboardFrame) return;
+    const scroller = panelRef.current?.querySelector<HTMLElement>("[data-wizard-scroll]");
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement) || !scroller?.contains(active) || active.tagName !== "INPUT") return;
+    const field = active.getBoundingClientRect();
+    const view = scroller.getBoundingClientRect();
+    if (field.bottom > view.bottom - 8) scroller.scrollTop += field.bottom - view.bottom + 16;
+    else if (field.top < view.top + 8) scroller.scrollTop -= view.top - field.top + 16;
+  }, [keyboardFrame]);
 
   useEffect(() => {
     if (!open) return;
@@ -302,9 +339,34 @@ function AppointmentDialog({
         aria-describedby={ledeId}
         data-wizard-step={step}
         tabIndex={-1}
+        style={
+          keyboardFrame
+            ? keyboardFrame.dock
+              ? { position: "fixed", top: keyboardFrame.top, left: 0, right: 0, height: keyboardFrame.height, maxHeight: keyboardFrame.height }
+              : {
+                  position: "fixed",
+                  top: keyboardFrame.top,
+                  left: "50%",
+                  width: "min(32rem, calc(100vw - 3rem))",
+                  transform: "translateX(-50%)",
+                  height: keyboardFrame.height,
+                  maxHeight: keyboardFrame.height,
+                }
+            : undefined
+        }
         className="relative z-10 flex h-[100dvh] w-full flex-col overflow-hidden bg-background text-foreground outline-none sm:h-auto sm:max-h-[min(42rem,calc(100dvh-3rem))] sm:max-w-lg sm:rounded-[1.75rem] sm:border sm:border-border sm:shadow-[0_24px_80px_-36px_rgba(28,33,28,0.55)]"
       >
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 sm:p-8">
+        <form
+          className="flex min-h-0 flex-auto flex-col"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (step === "name") void send("name", { name });
+            if (step === "phone") void send("phone", { phone });
+            if (step === "email") void send("email", { email });
+          }}
+        >
+        <div data-wizard-scroll className="flex min-h-0 flex-auto flex-col overflow-y-auto px-5 pb-4 pt-4 sm:px-8 sm:pt-8">
           <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
             <label>
               Company
@@ -339,32 +401,6 @@ function AppointmentDialog({
                 {copy.formThanks} {safeName}. {prefLabel ? `${copy.wizardPrefSaved} ${prefLabel}. ` : null}
                 {copy.formCall} <span className="font-medium">{phone.trim()}</span>
               </p>
-              <div className="mt-auto pt-8">
-                {href ? (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#128C7E] px-6 text-base font-medium text-white hover:bg-[#0e7569]"
-                  >
-                    <WhatsAppMark />
-                    {copy.formWhatsapp}
-                  </a>
-                ) : (
-                  <p className="text-[15px] leading-7 text-muted-foreground">{copy.formNoWhatsapp}</p>
-                )}
-                <button
-                  type="button"
-                  className="mt-6 block text-sm text-muted-foreground underline-offset-4 hover:underline"
-                  onClick={() => {
-                    setError("");
-                    setErrorCode("");
-                    setStep("name");
-                  }}
-                >
-                  {copy.formFix}
-                </button>
-              </div>
             </div>
           ) : (
             <div className="mt-6 flex flex-1 flex-col">
@@ -405,39 +441,9 @@ function AppointmentDialog({
                       {copy.wizardRestart}
                     </button>
                   ) : null}
-                  <div className="mt-auto grid gap-3 pt-8">
-                    {(["morning", "afternoon"] as const).map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        disabled={pending !== null}
-                        aria-pressed={preference === value}
-                        onClick={() => choose(value)}
-                        className="flex h-16 items-center justify-between rounded-2xl border border-border bg-card px-5 text-left font-serif text-2xl hover:border-[#0a7b71] disabled:opacity-60 aria-pressed:border-[#0a7b71] aria-pressed:bg-[#e5f4f2]"
-                      >
-                        {pending === "preference" && preference === value
-                          ? copy.formSending
-                          : value === "morning"
-                            ? copy.wizardMorning
-                            : copy.wizardAfternoon}
-                        <span aria-hidden className="text-lg text-[#0a7b71]">
-                          →
-                        </span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
               ) : (
-                <form
-                  className="mt-6 flex flex-1 flex-col"
-                  noValidate
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (step === "name") void send("name", { name });
-                    if (step === "phone") void send("phone", { phone });
-                    if (step === "email") void send("email", { email });
-                  }}
-                >
+                <div className="mt-6">
                   {step === "name" ? (
                     <Field id={nameId} label={copy.formName}>
                       <input
@@ -487,30 +493,84 @@ function AppointmentDialog({
                       {copy.wizardRestart}
                     </button>
                   ) : null}
-                  <div className="mt-auto grid gap-3 pt-8">
-                    <button
-                      type="submit"
-                      disabled={pending !== null}
-                      className="inline-flex h-12 items-center justify-center rounded-full bg-[#0a7b71] px-6 text-base font-medium text-[#f6f3ec] hover:bg-[#08685f] disabled:opacity-60"
-                    >
-                      {pending ? copy.formSending : copy.wizardNext}
-                    </button>
-                    {step === "email" ? (
-                      <button
-                        type="button"
-                        disabled={pending !== null}
-                        onClick={() => void send("email", { email: "" })}
-                        className="inline-flex h-12 items-center justify-center rounded-full border border-border bg-card px-6 text-base font-medium disabled:opacity-60"
-                      >
-                        {copy.wizardSkip}
-                      </button>
-                    ) : null}
-                  </div>
-                </form>
+                </div>
               )}
             </div>
           )}
         </div>
+        <div className="shrink-0 bg-background px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:pb-8">
+          {step === "success" ? (
+            <>
+              {href ? (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#128C7E] px-6 text-base font-medium text-white hover:bg-[#0e7569]"
+                >
+                  <WhatsAppMark />
+                  {copy.formWhatsapp}
+                </a>
+              ) : (
+                <p className="text-[15px] leading-7 text-muted-foreground">{copy.formNoWhatsapp}</p>
+              )}
+              <button
+                type="button"
+                className="mt-4 block text-sm text-muted-foreground underline-offset-4 hover:underline"
+                onClick={() => {
+                  setError("");
+                  setErrorCode("");
+                  setStep("name");
+                }}
+              >
+                {copy.formFix}
+              </button>
+            </>
+          ) : step === "preference" ? (
+            <div className="grid gap-3">
+              {(["morning", "afternoon"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={pending !== null}
+                  aria-pressed={preference === value}
+                  onClick={() => choose(value)}
+                  className="flex h-16 items-center justify-between rounded-2xl border border-border bg-card px-5 text-left font-serif text-2xl hover:border-[#0a7b71] disabled:opacity-60 aria-pressed:border-[#0a7b71] aria-pressed:bg-[#e5f4f2]"
+                >
+                  {pending === "preference" && preference === value
+                    ? copy.formSending
+                    : value === "morning"
+                      ? copy.wizardMorning
+                      : copy.wizardAfternoon}
+                  <span aria-hidden className="text-lg text-[#0a7b71]">
+                    →
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              <button
+                type="submit"
+                disabled={pending !== null}
+                className="inline-flex h-12 items-center justify-center rounded-full bg-[#0a7b71] px-6 text-base font-medium text-[#f6f3ec] hover:bg-[#08685f] disabled:opacity-60"
+              >
+                {pending ? copy.formSending : copy.wizardNext}
+              </button>
+              {step === "email" ? (
+                <button
+                  type="button"
+                  disabled={pending !== null}
+                  onClick={() => void send("email", { email: "" })}
+                  className="inline-flex h-12 items-center justify-center rounded-full border border-border bg-card px-6 text-base font-medium disabled:opacity-60"
+                >
+                  {copy.wizardSkip}
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
+        </form>
       </div>
     </div>,
     document.body,

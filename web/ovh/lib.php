@@ -435,16 +435,8 @@ function pcs_ensure_crm(PDO $db): void
 
 function pcs_whatsapp(string $locale, string $name): string
 {
-    $digits = preg_replace('/\D/', '', (string) (pcs_config()['whatsapp'] ?? '')) ?? '';
-    if (str_starts_with($digits, '00')) {
-        $digits = substr($digits, 2);
-    }
-    if (preg_match('/^[6-9]\d{8}$/', $digits) === 1) {
-        $digits = '34' . $digits;
-    }
-    if (preg_match('/^34[6-9]\d{8}$/', $digits) !== 1) {
-        return '';
-    }
+    // Número público de la consulta: +34 672 12 04 39.
+    $digits = '34672120439';
     $safe = mb_substr(str_replace(["\r", "\n"], ' ', $name), 0, 80);
     $text = $locale === 'ca'
         ? "Hola Pol, sóc {$safe}. Acabo de demanar hora a pcsfisioterapia.com."
