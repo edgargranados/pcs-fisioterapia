@@ -474,17 +474,19 @@ header('Referrer-Policy: no-referrer');
     details summary { cursor: pointer; color: #0a7b71; font-size: 0.85rem; }
     .edit.is-open { gap: 8px; margin-top: 10px; }
     .row { display: flex; gap: 8px; }
-    .lead { padding: 14px; margin-top: 10px; }
-    .lead h3 { margin: 0; font-size: 1.12rem; }
+    .lead { padding: 10px 12px; margin-top: 8px; }
+    .lead h3 { margin: 0; font-size: 1rem; line-height: 1.25; }
     .lead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
     .lead-main { display: block; min-width: 0; color: inherit; text-decoration: none; }
     .lead-main:hover h3 { color: #0a7b71; }
     .drag { display: none; }
     .event-kind { margin: 6px 0 0; font-weight: 600; }
-    .meta { margin: 6px 0 0; color: #5e675e; font-size: 0.9rem; }
-    .quick { display: flex; gap: 8px; margin-top: 10px; }
-    .quick a { flex: 1; }
-    .move { margin-top: 10px; }
+    .meta { margin: 2px 0 0; color: #5e675e; font-size: 0.78rem; line-height: 1.3; }
+    .quick { display: flex; gap: 6px; margin-top: 8px; }
+    .quick .btn { flex: 1; min-height: 32px; padding: 0 8px; font-size: 0.8rem; }
+    .move { display: none; margin-top: 8px; }
+    .move.is-open { display: block; }
+    .move label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .tag { display: inline-flex; align-items: center; min-height: 24px; margin: 8px 6px 0 0; padding: 0 8px; border-radius: 999px; background: #e5f4f2; color: #0a7b71; font-size: 0.78rem; }
     .tag.warn { background: #f3e6cf; color: #6a4b16; }
     .empty { margin: 14px 0 0; color: #5e675e; }
@@ -653,22 +655,16 @@ header('Referrer-Policy: no-referrer');
                 <div class="lead-top">
                   <a class="lead-main" href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>">
                     <h3><?= h($displayName) ?></h3>
-                    <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?></p>
-                    <?php if ($preferenceLabel !== '' || $partial): ?>
-                      <p>
-                        <?php if ($preferenceLabel !== ''): ?><span class="tag"><?= h($preferenceLabel) ?></span><?php endif; ?>
-                        <?php if ($partial): ?><span class="tag warn">Incompleta</span><?php endif; ?>
-                      </p>
-                    <?php endif; ?>
-                    <p class="meta"><?= h(pcs_origin_label($lead)) ?></p>
+                    <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?><?php if ($preferenceLabel !== ''): ?> · <?= h($preferenceLabel) ?><?php endif; ?><?php if ($partial): ?> · Incompleta<?php endif; ?> · <?= h(pcs_origin_label($lead)) ?></p>
                   </a>
                   <span class="drag" draggable="true" title="Arrastrar a otra etapa">⠿</span>
                 </div>
                 <div class="quick">
+                  <button type="button" class="btn ghost small" data-move aria-expanded="false" aria-controls="move-<?= $id ?>">Mover</button>
                   <?php if ($phoneHref !== ''): ?><a class="btn ghost small" data-touch="call" data-lead="<?= $id ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
                   <?php if ($whatsapp !== ''): ?><a class="btn ghost small" data-touch="whatsapp" data-lead="<?= $id ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
                 </div>
-                <form method="post" class="move">
+                <form method="post" class="move" id="move-<?= $id ?>">
                   <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
                   <input type="hidden" name="action" value="move_lead">
                   <input type="hidden" name="lead_id" value="<?= $id ?>">
@@ -832,6 +828,20 @@ header('Referrer-Policy: no-referrer');
         if (open) {
           panel.classList.add("is-open");
           button.setAttribute("aria-expanded", "true");
+        }
+      });
+    });
+    document.querySelectorAll("[data-move]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const form = document.getElementById(button.getAttribute("aria-controls") || "");
+        if (!form) return;
+        const open = !form.classList.contains("is-open");
+        document.querySelectorAll(".move.is-open").forEach((el) => el.classList.remove("is-open"));
+        document.querySelectorAll("[data-move]").forEach((el) => el.setAttribute("aria-expanded", "false"));
+        if (open) {
+          form.classList.add("is-open");
+          button.setAttribute("aria-expanded", "true");
+          form.querySelector("select")?.focus();
         }
       });
     });
