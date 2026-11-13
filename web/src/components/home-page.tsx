@@ -226,7 +226,6 @@ export function HomePage({ locale }: { locale: Locale }) {
         <div className="md:col-span-5">
           <p className="text-xs uppercase tracking-[0.18em] text-primary">{copy.formKicker}</p>
           <h2 className="mt-3 font-serif text-4xl tracking-tight md:text-5xl">{copy.formTitle}</h2>
-          <p className="mt-5 text-lg leading-8 text-muted-foreground">{copy.formLede}</p>
           <p className="mt-6 text-sm text-muted-foreground">
             {clinic.brand}
             {" · "}

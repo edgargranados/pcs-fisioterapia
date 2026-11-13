@@ -101,7 +101,6 @@ export function TherapyView({ locale, therapy }: { locale: Locale; therapy: Ther
         <section id="cita" className="mx-auto grid w-full max-w-6xl gap-10 px-5 pb-28 md:grid-cols-12">
           <div className="md:col-span-5">
             <h2 className="font-serif text-4xl tracking-tight">{copy.formTitle}</h2>
-            <p className="mt-4 text-muted-foreground">{copy.formLede}</p>
           </div>
           <div className="md:col-span-7">
             <BookForm locale={locale} page={path} />
