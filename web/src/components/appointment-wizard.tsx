@@ -175,12 +175,19 @@ function AppointmentDialog({
     let settle = 0;
     let applied = viewport.height;
     const update = () => {
+      const panel = panelRef.current;
+      const active = document.activeElement;
+      const typing = active instanceof HTMLInputElement && active.name !== "company" && !active.hasAttribute("data-keyboard-hold") && !!panel?.contains(active);
       const narrow = window.matchMedia("(max-width: 639px)").matches;
       const keyboard = window.innerHeight - viewport.height > 80;
+      if (typing && viewport.height >= applied - 40) return;
       const next = !narrow && !keyboard ? null : { height: viewport.height, top: viewport.offsetTop, dock: narrow };
       window.clearTimeout(settle);
       if (next === null || next.height > applied + 40) {
         settle = window.setTimeout(() => {
+          const current = document.activeElement;
+          const stillTyping = current instanceof HTMLInputElement && current.name !== "company" && !!panelRef.current?.contains(current);
+          if (stillTyping) return;
           applied = next?.height ?? window.innerHeight;
           setKeyboardFrame(next);
         }, 280);
@@ -191,27 +198,14 @@ function AppointmentDialog({
     };
     update();
     viewport.addEventListener("resize", update);
-    viewport.addEventListener("scroll", update);
     window.addEventListener("resize", update);
     return () => {
       window.clearTimeout(settle);
       viewport.removeEventListener("resize", update);
-      viewport.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
       setKeyboardFrame(null);
     };
   }, [open]);
-
-  useLayoutEffect(() => {
-    if (!keyboardFrame) return;
-    const scroller = panelRef.current?.querySelector<HTMLElement>("[data-wizard-scroll]");
-    const active = document.activeElement;
-    if (!(active instanceof HTMLElement) || !scroller?.contains(active) || active.tagName !== "INPUT") return;
-    const field = active.getBoundingClientRect();
-    const view = scroller.getBoundingClientRect();
-    if (field.bottom > view.bottom - 8) scroller.scrollTop += field.bottom - view.bottom + 16;
-    else if (field.top < view.top + 8) scroller.scrollTop -= view.top - field.top + 16;
-  }, [keyboardFrame]);
 
   useEffect(() => {
     if (!open) return;
@@ -223,6 +217,7 @@ function AppointmentDialog({
         (el) => el.tabIndex !== -1 && el.getAttribute("aria-hidden") !== "true",
       );
 
+    let tabDirection: "forward" | "back" | null = null;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -230,6 +225,7 @@ function AppointmentDialog({
         return;
       }
       if (event.key !== "Tab") return;
+      tabDirection = event.shiftKey ? "back" : "forward";
       const items = focusable();
       if (items.length === 0) return;
       const first = items[0];
@@ -243,9 +239,9 @@ function AppointmentDialog({
       }
     };
 
-    let textField: HTMLInputElement | null = panel.querySelector("input:not([name=company])");
     let pressedControl = false;
     let release = 0;
+    const currentField = () => panel.querySelector<HTMLInputElement>("input[data-initial-focus]");
     const onPointerDown = (event: PointerEvent) => {
       pressedControl = event.target instanceof Element && Boolean(event.target.closest("button, a"));
       window.clearTimeout(release);
@@ -254,23 +250,28 @@ function AppointmentDialog({
       }, 400);
     };
     const onFocusIn = (event: FocusEvent) => {
-      if (event.target instanceof HTMLInputElement && event.target.name !== "company" && panel.contains(event.target)) {
-        textField = event.target;
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || !panel.contains(target) || !target.hasAttribute("data-keyboard-hold")) return;
+      if (tabDirection === "forward" || tabDirection === "back") {
+        const direction = tabDirection;
+        tabDirection = null;
+        const items = focusable();
+        const field = currentField();
+        const index = field ? items.indexOf(field) : -1;
+        const destination = direction === "back" ? items[Math.max(0, index)] : items[index + 1] ?? items[0];
+        destination?.focus();
+        return;
       }
+      currentField()?.focus({ preventScroll: true });
     };
     const onFocusOut = (event: FocusEvent) => {
       const next = event.relatedTarget;
+      if (next instanceof Element && next.hasAttribute("data-keyboard-hold")) return;
       if (next instanceof Node && panel.contains(next)) return;
       if (pressedControl) return;
-      const field = textField;
-      if (!field || !panel.contains(field)) return;
-      window.setTimeout(() => {
-        pressedControl = false;
-        if (!panel.isConnected || !field.isConnected) return;
-        const active = document.activeElement;
-        if (active instanceof HTMLElement && panel.contains(active) && active !== field) return;
-        field.focus({ preventScroll: true });
-      }, 0);
+      const field = currentField();
+      if (!field || !field.isConnected) return;
+      field.focus({ preventScroll: true });
     };
 
     document.addEventListener("keydown", onKey);
@@ -497,6 +498,7 @@ function AppointmentDialog({
                         value={name}
                         onChange={(event) => setName(event.target.value)}
                         autoComplete="name"
+                        enterKeyHint="next"
                         maxLength={80}
                         required
                         className={fieldClass}
@@ -513,6 +515,7 @@ function AppointmentDialog({
                         type="tel"
                         inputMode="tel"
                         autoComplete="tel"
+                        enterKeyHint="next"
                         required
                         className={fieldClass}
                       />
@@ -527,6 +530,7 @@ function AppointmentDialog({
                         onChange={(event) => setEmail(event.target.value)}
                         type="email"
                         autoComplete="email"
+                        enterKeyHint="next"
                         maxLength={120}
                         className={fieldClass}
                       />
@@ -635,7 +639,19 @@ function Field({ id, label, children }: { id: string; label: string; children: R
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
-      {children}
+      <div className="relative">
+        {children}
+        <input
+          data-keyboard-hold=""
+          name="keyboard-hold"
+          autoComplete="off"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+          onFocus={(event) => {
+            event.currentTarget.parentElement?.querySelector<HTMLInputElement>("input[data-initial-focus]")?.focus({ preventScroll: true });
+          }}
+        />
+      </div>
     </div>
   );
 }
