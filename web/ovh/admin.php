@@ -373,10 +373,12 @@ function pcs_crm_action(PDO $db, array $post): array
 function pcs_when(string $value): string
 {
     try {
-        return (new DateTimeImmutable($value))->format('d/m/Y H:i');
+        $date = new DateTimeImmutable($value);
     } catch (Throwable) {
         return $value;
     }
+    $months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return $date->format('j') . '-' . $months[(int) $date->format('n') - 1];
 }
 
 function pcs_preference_label(mixed $value): string
