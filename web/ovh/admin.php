@@ -109,7 +109,7 @@ if ($signedIn) {
                     l.gclid, l.fbclid, l.gbraid, l.wbraid, l.msclkid, l.ttclid,
                     (SELECT COUNT(*) FROM lead_notes n WHERE n.lead_id = l.id) AS note_count
              FROM leads l
-             ORDER BY l.created_at DESC'
+             ORDER BY l.sort_order ASC, l.created_at DESC, l.id DESC'
         )->fetchAll();
         foreach ($stages as $stage) {
             $leadsByStage[(int) $stage['id']] = [];
@@ -194,6 +194,27 @@ function pcs_crm_label(string $value): ?string
         return null;
     }
     return $value;
+}
+
+function pcs_place_lead(PDO $db, int $stageId, int $leadId, int $beforeId, bool $atEnd): void
+{
+    $rows = $db->prepare('SELECT id FROM leads WHERE stage_id = ? AND id <> ? ORDER BY sort_order ASC, created_at DESC, id DESC');
+    $rows->execute([$stageId, $leadId]);
+    $ids = array_map(static fn (mixed $id): int => (int) $id, $rows->fetchAll(PDO::FETCH_COLUMN));
+    $index = $beforeId > 0 ? array_search($beforeId, $ids, true) : false;
+    if ($index === false) {
+        if ($atEnd) {
+            $ids[] = $leadId;
+        } else {
+            array_unshift($ids, $leadId);
+        }
+    } else {
+        array_splice($ids, (int) $index, 0, [$leadId]);
+    }
+    $update = $db->prepare('UPDATE leads SET stage_id = ?, sort_order = ? WHERE id = ?');
+    foreach ($ids as $order => $id) {
+        $update->execute([$stageId, (int) $order, (int) $id]);
+    }
 }
 
 function pcs_log_event(PDO $db, int $leadId, string $kind, string $detail): void
@@ -318,9 +339,10 @@ function pcs_crm_action(PDO $db, array $post): array
         }
         if ((int) $currentStage !== $stageId) {
             $fromName = (string) ($known[(int) $currentStage]['name'] ?? 'Sin etapa');
-            $db->prepare('UPDATE leads SET stage_id = ? WHERE id = ?')->execute([$stageId, $leadId]);
             pcs_log_event($db, $leadId, 'stage', $fromName . ' → ' . (string) $known[$stageId]['name']);
         }
+        $beforeId = (int) ($post['before_id'] ?? 0);
+        pcs_place_lead($db, $stageId, $leadId, $beforeId, (string) ($post['at'] ?? '') === 'end');
         $keep = (string) ($post['keep_lead'] ?? '') === '1';
         return [
             'error' => '',
@@ -509,6 +531,8 @@ header('Referrer-Policy: no-referrer');
     .log p { margin: 0; white-space: pre-wrap; }
     .composer { padding: 12px; margin-top: 8px; }
     .column.over { outline: 2px dashed #0a7b71; outline-offset: 3px; }
+    .slot { height: 76px; margin-top: 8px; border: 2px dashed #0a7b71; border-radius: 16px; background: rgba(10, 123, 113, 0.14); }
+    .lead.is-dragging { opacity: 0.4; }
     @media (min-width: 900px) {
       body.app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
       body.app .top { flex: none; }
@@ -878,6 +902,29 @@ header('Referrer-Policy: no-referrer');
         const value = custom || plain;
         return /^\d+$/.test(value) ? value : "";
       };
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      slot.setAttribute("aria-hidden", "true");
+      const followingId = (node) => {
+        let next = node.nextElementSibling;
+        while (next && !(next instanceof Element && next.matches("[data-lead]"))) next = next.nextElementSibling;
+        return next instanceof Element ? next.getAttribute("data-lead") || "" : "";
+      };
+      const placeSlot = (column, y) => {
+        const body = column.querySelector(".column-body");
+        if (!body) return;
+        const cards = [...body.querySelectorAll(".lead")].filter((card) => !card.classList.contains("is-dragging"));
+        let before = null;
+        for (const card of cards) {
+          const rect = card.getBoundingClientRect();
+          if (y < rect.top + rect.height / 2) {
+            before = card;
+            break;
+          }
+        }
+        if (before) body.insertBefore(slot, before);
+        else body.appendChild(slot);
+      };
       document.querySelectorAll("[data-lead]").forEach((card) => {
         card.draggable = true;
         card.addEventListener("dragstart", (event) => {
@@ -889,13 +936,20 @@ header('Referrer-Policy: no-referrer');
           event.dataTransfer.setData("application/x-pcs-lead", id);
           event.dataTransfer.setData("text/plain", id);
           event.dataTransfer.effectAllowed = "move";
+          card.classList.add("is-dragging");
         });
+      });
+      document.addEventListener("dragend", () => {
+        slot.remove();
+        document.querySelectorAll(".is-dragging").forEach((card) => card.classList.remove("is-dragging"));
+        document.querySelectorAll(".column.over").forEach((column) => column.classList.remove("over"));
       });
       document.querySelectorAll("[data-stage]").forEach((column) => {
         column.addEventListener("dragover", (event) => {
           event.preventDefault();
           if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
           column.classList.add("over");
+          placeSlot(column, event.clientY);
         });
         column.addEventListener("dragleave", (event) => {
           if (event.relatedTarget instanceof Node && column.contains(event.relatedTarget)) return;
@@ -905,7 +959,14 @@ header('Referrer-Policy: no-referrer');
           event.preventDefault();
           column.classList.remove("over");
           const leadId = leadIdFrom(event.dataTransfer);
-          if (!leadId || cardIsHere(column, leadId)) return;
+          if (!leadId || !slot.isConnected) return;
+          const beforeId = followingId(slot);
+          const card = document.querySelector('[data-lead="' + leadId + '"]');
+          if (card && column.contains(card) && followingId(card) === beforeId) {
+            slot.remove();
+            return;
+          }
+          slot.remove();
           const form = document.createElement("form");
           form.method = "post";
           const fields = {
@@ -914,6 +975,8 @@ header('Referrer-Policy: no-referrer');
             lead_id: leadId,
             stage_id: column.getAttribute("data-stage") || "",
             back_stage: column.getAttribute("data-stage") || "",
+            before_id: beforeId,
+            at: beforeId ? "" : "end",
           };
           Object.entries(fields).forEach(([name, value]) => {
             const input = document.createElement("input");
@@ -926,10 +989,6 @@ header('Referrer-Policy: no-referrer');
           form.submit();
         });
       });
-      function cardIsHere(column, leadId) {
-        const card = document.querySelector('[data-lead="' + leadId + '"]');
-        return Boolean(card && column.contains(card));
-      }
     }
   </script>
 <?php endif; ?>
