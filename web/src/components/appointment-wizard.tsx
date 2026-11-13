@@ -172,20 +172,29 @@ function AppointmentDialog({
     if (!open) return;
     const viewport = window.visualViewport;
     if (!viewport) return;
+    let settle = 0;
+    let applied = viewport.height;
     const update = () => {
       const narrow = window.matchMedia("(max-width: 639px)").matches;
       const keyboard = window.innerHeight - viewport.height > 80;
-      if (!narrow && !keyboard) {
-        setKeyboardFrame(null);
+      const next = !narrow && !keyboard ? null : { height: viewport.height, top: viewport.offsetTop, dock: narrow };
+      window.clearTimeout(settle);
+      if (next === null || next.height > applied + 40) {
+        settle = window.setTimeout(() => {
+          applied = next?.height ?? window.innerHeight;
+          setKeyboardFrame(next);
+        }, 280);
         return;
       }
-      setKeyboardFrame({ height: viewport.height, top: viewport.offsetTop, dock: narrow });
+      applied = next.height;
+      setKeyboardFrame(next);
     };
     update();
     viewport.addEventListener("resize", update);
     viewport.addEventListener("scroll", update);
     window.addEventListener("resize", update);
     return () => {
+      window.clearTimeout(settle);
       viewport.removeEventListener("resize", update);
       viewport.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
@@ -234,17 +243,47 @@ function AppointmentDialog({
       }
     };
 
-    const onFocus = (event: FocusEvent) => {
-      if (panel.contains(event.target as Node)) return;
-      focusable()[0]?.focus();
+    let textField: HTMLInputElement | null = panel.querySelector("input:not([name=company])");
+    let pressedControl = false;
+    let release = 0;
+    const onPointerDown = (event: PointerEvent) => {
+      pressedControl = event.target instanceof Element && Boolean(event.target.closest("button, a"));
+      window.clearTimeout(release);
+      release = window.setTimeout(() => {
+        pressedControl = false;
+      }, 400);
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      if (event.target instanceof HTMLInputElement && event.target.name !== "company" && panel.contains(event.target)) {
+        textField = event.target;
+      }
+    };
+    const onFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget;
+      if (next instanceof Node && panel.contains(next)) return;
+      if (pressedControl) return;
+      const field = textField;
+      if (!field || !panel.contains(field)) return;
+      window.setTimeout(() => {
+        pressedControl = false;
+        if (!panel.isConnected || !field.isConnected) return;
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && panel.contains(active) && active !== field) return;
+        field.focus({ preventScroll: true });
+      }, 0);
     };
 
     document.addEventListener("keydown", onKey);
-    document.addEventListener("focusin", onFocus);
+    panel.addEventListener("pointerdown", onPointerDown);
+    panel.addEventListener("focusin", onFocusIn);
+    panel.addEventListener("focusout", onFocusOut);
     panel.querySelector<HTMLElement>("[data-initial-focus]")?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.removeEventListener("focusin", onFocus);
+      window.clearTimeout(release);
+      panel.removeEventListener("pointerdown", onPointerDown);
+      panel.removeEventListener("focusin", onFocusIn);
+      panel.removeEventListener("focusout", onFocusOut);
     };
   }, [open, step]);
 
@@ -368,7 +407,7 @@ function AppointmentDialog({
             if (step === "email") void send("email", { email });
           }}
         >
-        <div data-wizard-scroll className="flex min-h-0 flex-auto flex-col overflow-y-auto px-5 pb-4 pt-4 sm:px-8 sm:pt-8">
+        <div data-wizard-scroll className="relative flex min-h-0 flex-auto flex-col overflow-y-auto px-5 pb-4 pt-4 sm:px-8 sm:pt-8">
           <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
             <label>
               Company
@@ -404,28 +443,52 @@ function AppointmentDialog({
                 {copy.formCall} <span className="font-medium">{phone.trim()}</span>
               </p>
             </div>
+          ) : step === "preference" ? (
+            <>
+              <h2 id={titleId} tabIndex={-1} className="mt-6 font-serif text-4xl tracking-tight outline-none">
+                {copy.wizardPrefTitle}
+              </h2>
+              <p id={ledeId} className="mt-3 text-base leading-7 text-muted-foreground">
+                {copy.wizardPrefLede}
+              </p>
+              <div className="mt-8 grid gap-3 max-sm:absolute max-sm:inset-x-5 max-sm:top-1/2 max-sm:mt-0 max-sm:-translate-y-1/2">
+                  {(["morning", "afternoon"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={pending !== null}
+                      aria-pressed={preference === value}
+                      data-initial-focus={value === "morning" ? true : undefined}
+                      onClick={() => choose(value)}
+                      className="flex h-16 items-center justify-between rounded-2xl border border-border bg-card px-5 text-left font-serif text-2xl hover:border-[#0a7b71] disabled:opacity-60 aria-pressed:border-[#0a7b71] aria-pressed:bg-[#e5f4f2]"
+                    >
+                      {pending === "preference" && preference === value
+                        ? copy.formSending
+                        : value === "morning"
+                          ? copy.wizardMorning
+                          : copy.wizardAfternoon}
+                      <span aria-hidden className="text-lg text-[#0a7b71]">
+                        →
+                      </span>
+                    </button>
+                  ))}
+                  {error ? <ErrorText>{error}</ErrorText> : null}
+                  {errorCode === "lead" ? (
+                    <button type="button" className="text-sm text-[#0a7b71] underline" onClick={reset}>
+                      {copy.wizardRestart}
+                    </button>
+                  ) : null}
+              </div>
+            </>
           ) : (
             <div className="mt-6 flex flex-1 flex-col">
               <h2 id={titleId} tabIndex={-1} className="font-serif text-4xl tracking-tight outline-none">
-                {step === "preference" ? copy.wizardPrefTitle : step === "name" ? copy.wizardNameTitle : step === "phone" ? copy.wizardPhoneTitle : copy.wizardEmailTitle}
+                {step === "name" ? copy.wizardNameTitle : step === "phone" ? copy.wizardPhoneTitle : copy.wizardEmailTitle}
               </h2>
               <p id={ledeId} className="mt-3 text-base leading-7 text-muted-foreground">
-                {step === "preference" ? copy.wizardPrefLede : step === "name" ? copy.wizardNameLede : step === "phone" ? copy.wizardPhoneLede : copy.wizardEmailLede}
+                {step === "name" ? copy.wizardNameLede : step === "phone" ? copy.wizardPhoneLede : copy.wizardEmailLede}
               </p>
-
-              {step === "preference" ? (
-                error || errorCode === "lead" ? (
-                  <div className="mt-6">
-                    {error ? <ErrorText>{error}</ErrorText> : null}
-                    {errorCode === "lead" ? (
-                      <button type="button" className="mt-3 text-sm text-[#0a7b71] underline" onClick={reset}>
-                        {copy.wizardRestart}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null
-              ) : (
-                <div className="mt-6">
+              <div className="mt-6">
                   {step === "name" ? (
                     <Field id={nameId} label={copy.formName}>
                       <input
@@ -475,12 +538,11 @@ function AppointmentDialog({
                       {copy.wizardRestart}
                     </button>
                   ) : null}
-                </div>
-              )}
+              </div>
             </div>
           )}
         </div>
-        <div className="shrink-0 bg-background px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:pb-8">
+        <div className={`shrink-0 bg-background px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:pb-8 ${step === "preference" ? "hidden" : ""}`}>
           {step === "success" ? (
             <>
               {href ? (
@@ -508,30 +570,7 @@ function AppointmentDialog({
                 {copy.formFix}
               </button>
             </>
-          ) : step === "preference" ? (
-            <div className="grid gap-3">
-              {(["morning", "afternoon"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  disabled={pending !== null}
-                  aria-pressed={preference === value}
-                  data-initial-focus={value === "morning" ? true : undefined}
-                  onClick={() => choose(value)}
-                  className="flex h-16 items-center justify-between rounded-2xl border border-border bg-card px-5 text-left font-serif text-2xl hover:border-[#0a7b71] disabled:opacity-60 aria-pressed:border-[#0a7b71] aria-pressed:bg-[#e5f4f2]"
-                >
-                  {pending === "preference" && preference === value
-                    ? copy.formSending
-                    : value === "morning"
-                      ? copy.wizardMorning
-                      : copy.wizardAfternoon}
-                  <span aria-hidden className="text-lg text-[#0a7b71]">
-                    →
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : (
+          ) : step === "preference" ? null : (
             <div className="grid gap-3">
               {step === "phone" ? (
                 <>
@@ -562,6 +601,7 @@ function AppointmentDialog({
               <button
                 type="submit"
                 disabled={pending !== null}
+                onMouseDown={(event) => event.preventDefault()}
                 className="inline-flex h-12 items-center justify-center rounded-full bg-[#0a7b71] px-6 text-base font-medium text-[#f6f3ec] hover:bg-[#08685f] disabled:opacity-60"
               >
                 {pending ? copy.formSending : copy.wizardNext}
