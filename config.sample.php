@@ -15,6 +15,7 @@ return [
     'db_user' => 'xxxxx',
     'db_pass' => '',
     'db_port' => 3306,
-    'whatsapp' => '',
+    // La web usa +34 672 12 04 39 aunque esta clave esté vacía.
+    'whatsapp' => '34672120439',
     'admin_password_hash' => '',
 ];

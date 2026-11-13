@@ -1,4 +1,4 @@
-:HL["/_next/static/chunks/33nm_vxlwk3uf.css","style"]
+:HL["/_next/static/chunks/2x3bwa8zl--0l.css","style"]
 :HL["/_next/static/media/c0680f1bdb3a2e90-s.p.1gsd1jahc5dg_.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/ddb686d70dc9968d-s.p.16u3vygyjnhr0.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/edb99fec956915f8-s.p.32sris142tqlb.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
@@ -7,4 +7,4 @@
 3:[["children",{"s":"__PAGE__","h":160}]]
 2:[["children",{"s":{"n":"slug","t":"d","k":"premia-de-mar","s":[]},"h":96,"c":"$Q3"}]]
 1:[["children",{"s":"zonas","h":64,"c":"$Q2"}]]
-0:{"b":"_QLMr517F_VwiZZ4WI0LP","t":{"t":{"s":"","h":16,"c":"$Q1"}}}
+0:{"b":"0Ge_gTT8JqLKtbWeoJsJ8","t":{"t":{"s":"","h":16,"c":"$Q1"}}}
