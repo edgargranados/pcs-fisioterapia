@@ -389,6 +389,26 @@ function pcs_crm_action(PDO $db, array $post): array
         return ['error' => '', 'ok' => '', 'query' => ['stage' => (int) ($post['back_stage'] ?? 0), 'lead' => $leadId], 'ajax' => $ajax];
     }
 
+    if ($action === 'delete_lead') {
+        if ($leadId < 1) {
+            return $fail('No se ha podido eliminar el lead.');
+        }
+        $exists = $db->prepare('SELECT stage_id FROM leads WHERE id = ?');
+        $exists->execute([$leadId]);
+        $leadStage = $exists->fetchColumn();
+        if ($leadStage === false) {
+            return $fail('Ese lead ya no está.');
+        }
+        $db->prepare('DELETE FROM lead_notes WHERE lead_id = ?')->execute([$leadId]);
+        $db->prepare('DELETE FROM lead_events WHERE lead_id = ?')->execute([$leadId]);
+        $db->prepare('DELETE FROM leads WHERE id = ?')->execute([$leadId]);
+        return [
+            'error' => '',
+            'ok' => 'Lead eliminado.',
+            'query' => ['stage' => (int) ($post['back_stage'] ?? $leadStage)],
+        ];
+    }
+
     return $fail('Acción no reconocida.');
 }
 
@@ -533,6 +553,13 @@ header('Referrer-Policy: no-referrer');
     .column.over { outline: 2px dashed #0a7b71; outline-offset: 3px; }
     .slot { height: 76px; margin-top: 8px; border: 2px dashed #0a7b71; border-radius: 16px; background: rgba(10, 123, 113, 0.14); }
     .lead.is-dragging { opacity: 0.4; }
+    .danger-row { margin-top: 28px; }
+    .confirm { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 20px; background: rgba(28, 33, 28, 0.46); }
+    .confirm[hidden] { display: none; }
+    .confirm-card { width: min(24rem, 100%); background: #fff; border-radius: 18px; padding: 24px; }
+    .confirm-card h2 { margin: 0; font-size: 1.4rem; letter-spacing: -0.03em; }
+    .confirm-card p { margin: 10px 0 0; }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
     @media (min-width: 900px) {
       body.app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
       body.app .top { flex: none; }
@@ -545,7 +572,8 @@ header('Referrer-Policy: no-referrer');
       .edit.is-open { flex: none; margin: 0 14px 4px; }
       .column-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 14px 14px; }
       .drag { display: grid; place-items: center; width: 28px; height: 36px; cursor: grab; color: #5e675e; user-select: none; }
-      .drawer { inset: 0 0 0 auto; width: min(440px, 100%); box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
+      .quick [data-move] { display: none; }
+      .drawer { inset: 0 0 0 auto; width: min(480px, 100%); padding: 36px 40px 56px; box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
     }
   </style>
 </head>
@@ -759,7 +787,7 @@ header('Referrer-Policy: no-referrer');
         <li><?= $openPartial ? 'Solicitud incompleta' : 'Solicitud completa' ?></li>
         <li><?= h((string) (($openLead['email'] ?? '') !== '' && $openLead['email'] !== null ? $openLead['email'] : 'Sin email')) ?></li>
         <li><?= h(strtoupper((string) $openLead['locale'])) ?> · <?= h((string) (($openLead['page'] ?? '') !== '' && $openLead['page'] !== null ? $openLead['page'] : 'Página no indicada')) ?></li>
-        <li>Entró el <?= h(pcs_when((string) $openLead['created_at'])) ?></li>
+        <li>Se registró el <?= h(pcs_when((string) $openLead['created_at'])) ?></li>
       </ul>
       <h3>Etapa</h3>
       <div class="stage-picks">
@@ -806,7 +834,7 @@ header('Referrer-Policy: no-referrer');
             return strcmp($b['at'], $a['at']);
         });
         $eventLabels = [
-            'created' => 'Entró',
+            'created' => 'Se registró',
             'stage' => 'Cambió de etapa',
             'note' => 'Nota',
             'call' => 'Se ha llamado',
@@ -820,7 +848,10 @@ header('Referrer-Policy: no-referrer');
           $detail = trim((string) $item['detail']);
           $label = $eventLabels[$kind] ?? $kind;
           if ($kind === 'created' && $detail !== '') {
-              $label .= ' · ' . $detail;
+              if ($detail === 'Directo') {
+                  $detail = 'canal directo';
+              }
+              $label .= ' - ' . $detail;
               $detail = '';
           } elseif ($kind === 'stage' && $detail !== '') {
               $label .= ': ' . $detail;
@@ -836,6 +867,23 @@ header('Referrer-Policy: no-referrer');
         </li>
       <?php endforeach; ?>
       </ol>
+      <div class="danger-row">
+        <button type="button" class="btn danger" data-ask-delete>Eliminar lead</button>
+      </div>
+      <div class="confirm" hidden>
+        <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+          <h2 id="delete-title">¿Eliminar este lead?</h2>
+          <p>Se borrarán los datos de <?= h($openName !== '' ? $openName : 'este lead') ?>, las notas y el historial. No se puede deshacer.</p>
+          <form method="post" class="confirm-actions">
+            <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
+            <input type="hidden" name="action" value="delete_lead">
+            <input type="hidden" name="lead_id" value="<?= $openId ?>">
+            <input type="hidden" name="back_stage" value="<?= (int) $openStage ?>">
+            <button type="button" class="btn ghost" data-cancel-delete>Cancelar</button>
+            <button class="btn danger" type="submit">Eliminar</button>
+          </form>
+        </div>
+      </div>
     </section>
   <?php endif; ?>
   <script>
@@ -988,6 +1036,27 @@ header('Referrer-Policy: no-referrer');
           document.body.appendChild(form);
           form.submit();
         });
+      });
+    }
+    const askDelete = document.querySelector("[data-ask-delete]");
+    const confirmDelete = document.querySelector(".confirm");
+    if (askDelete && confirmDelete) {
+      const closeDelete = () => {
+        confirmDelete.hidden = true;
+      };
+      askDelete.addEventListener("click", () => {
+        confirmDelete.hidden = false;
+        confirmDelete.querySelector("[data-cancel-delete]")?.focus();
+      });
+      confirmDelete.addEventListener("click", (event) => {
+        if (event.target === confirmDelete) closeDelete();
+      });
+      confirmDelete.querySelector("[data-cancel-delete]")?.addEventListener("click", closeDelete);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !confirmDelete.hidden) {
+          event.preventDefault();
+          closeDelete();
+        }
       });
     }
   </script>
