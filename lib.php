@@ -413,6 +413,16 @@ function pcs_ensure_crm(PDO $db): void
             KEY lead_notes_lead_idx (lead_id, created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS lead_events (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            lead_id BIGINT UNSIGNED NOT NULL,
+            kind VARCHAR(24) NOT NULL,
+            detail VARCHAR(500) NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY lead_events_lead_idx (lead_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
     if (!pcs_column_exists($db, 'leads', 'stage_id')) {
         $db->exec('ALTER TABLE leads ADD COLUMN stage_id INT UNSIGNED NULL, ADD KEY leads_stage_idx (stage_id)');
     }
