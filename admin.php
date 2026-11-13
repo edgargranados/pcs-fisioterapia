@@ -464,7 +464,9 @@ header('Referrer-Policy: no-referrer');
     .board { display: block; }
     .column { display: none; padding: 14px; background: #e7f1ef; border-color: #d3e4e1; }
     .column.is-current { display: block; }
-    .column-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .column-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .stage-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .count { display: inline-grid; place-items: center; min-width: 1.55rem; height: 1.55rem; padding: 0 5px; border-radius: 999px; background: #fff; color: #0a7b71; font-size: 0.78rem; font-weight: 650; line-height: 1; }
     .icon-btn { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 999px; border: 1px solid #d5cbbd; background: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: #1c211c; }
     .icon-btn[aria-expanded="true"] { background: #e5f4f2; border-color: #0a7b71; color: #0a7b71; }
     .edit { display: none; }
@@ -597,9 +599,10 @@ header('Referrer-Policy: no-referrer');
           ?>
           <section class="column<?= $stageId === $activeStage ? ' is-current' : '' ?>" data-stage="<?= $stageId ?>">
             <div class="column-head">
-              <div>
+              <div class="stage-title">
+                <?php $leadCount = count($columnLeads); ?>
+                <span class="count" aria-label="<?= $leadCount ?> <?= $leadCount === 1 ? 'lead' : 'leads' ?>"><?= $leadCount ?></span>
                 <h2><?= h((string) $stage['name']) ?></h2>
-                <p class="muted"><?= count($columnLeads) ?> <?= count($columnLeads) === 1 ? 'lead' : 'leads' ?></p>
               </div>
               <button type="button" class="icon-btn" data-edit-stage aria-expanded="false" aria-controls="stage-edit-<?= $stageId ?>" aria-label="Editar etapa">
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
