@@ -37,6 +37,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     } elseif ($signedIn) {
         try {
             $result = pcs_crm_action(pcs_db(), $_POST);
+            if (($result['ajax'] ?? false) === true) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => $result['error'] === ''], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
             if ($result['error'] !== '') {
                 $_SESSION['flash_error'] = $result['error'];
             }
@@ -87,6 +92,7 @@ unset($_SESSION['flash_error'], $_SESSION['flash_ok']);
 $stages = [];
 $leadsByStage = [];
 $notes = [];
+$events = [];
 $openLead = null;
 $dbError = '';
 $activeStage = 0;
@@ -123,6 +129,9 @@ if ($signedIn) {
             $noteStmt = $db->prepare('SELECT id, body, created_at FROM lead_notes WHERE lead_id = ? ORDER BY created_at DESC, id DESC');
             $noteStmt->execute([(int) $openLead['id']]);
             $notes = $noteStmt->fetchAll();
+            $eventStmt = $db->prepare('SELECT id, kind, detail, created_at FROM lead_events WHERE lead_id = ? ORDER BY created_at DESC, id DESC');
+            $eventStmt->execute([(int) $openLead['id']]);
+            $events = $eventStmt->fetchAll();
         }
     } catch (Throwable) {
         $dbError = 'No se ha podido leer la base de datos. Revisa config.local.php y que schema.sql esté importado.';
@@ -185,6 +194,19 @@ function pcs_crm_label(string $value): ?string
         return null;
     }
     return $value;
+}
+
+function pcs_log_event(PDO $db, int $leadId, string $kind, string $detail): void
+{
+    $detail = trim($detail);
+    if (mb_strlen($detail) > 500) {
+        $detail = mb_substr($detail, 0, 500);
+    }
+    $db->prepare('INSERT INTO lead_events (lead_id, kind, detail) VALUES (?, ?, ?)')->execute([
+        $leadId,
+        $kind,
+        $detail === '' ? null : $detail,
+    ]);
 }
 
 function pcs_crm_action(PDO $db, array $post): array
@@ -267,9 +289,17 @@ function pcs_crm_action(PDO $db, array $post): array
         $ids = array_map(static fn (array $stage): int => (int) $stage['id'], $stages);
         $index = (int) array_search($stageId, $ids, true);
         $target = $ids[$index - 1] ?? $ids[$index + 1];
+        $moving = $db->prepare('SELECT id FROM leads WHERE stage_id = ?');
+        $moving->execute([$stageId]);
+        $movingIds = array_map(static fn (mixed $id): int => (int) $id, $moving->fetchAll(PDO::FETCH_COLUMN));
+        $fromName = (string) $known[$stageId]['name'];
+        $toName = (string) ($known[$target]['name'] ?? '');
         $move = $db->prepare('UPDATE leads SET stage_id = ? WHERE stage_id = ?');
         $move->execute([$target, $stageId]);
-        $moved = $move->rowCount();
+        foreach ($movingIds as $movingId) {
+            pcs_log_event($db, $movingId, 'stage', $fromName . ' → ' . $toName);
+        }
+        $moved = count($movingIds);
         $db->prepare('DELETE FROM stages WHERE id = ?')->execute([$stageId]);
         pcs_crm_reindex($db, array_values(array_filter($ids, static fn (int $id): bool => $id !== $stageId)));
         $ok = $moved > 0 ? 'Etapa eliminada. Los leads han pasado a la etapa de al lado.' : 'Etapa eliminada.';
@@ -280,12 +310,17 @@ function pcs_crm_action(PDO $db, array $post): array
         if ($leadId < 1 || !isset($known[$stageId])) {
             return $fail('No se ha podido mover el lead.');
         }
-        $exists = $db->prepare('SELECT id FROM leads WHERE id = ?');
+        $exists = $db->prepare('SELECT stage_id FROM leads WHERE id = ?');
         $exists->execute([$leadId]);
-        if ($exists->fetchColumn() === false) {
+        $currentStage = $exists->fetchColumn();
+        if ($currentStage === false) {
             return $fail('Ese lead ya no está.');
         }
-        $db->prepare('UPDATE leads SET stage_id = ? WHERE id = ?')->execute([$stageId, $leadId]);
+        if ((int) $currentStage !== $stageId) {
+            $fromName = (string) ($known[(int) $currentStage]['name'] ?? 'Sin etapa');
+            $db->prepare('UPDATE leads SET stage_id = ? WHERE id = ?')->execute([$stageId, $leadId]);
+            pcs_log_event($db, $leadId, 'stage', $fromName . ' → ' . (string) $known[$stageId]['name']);
+        }
         $keep = (string) ($post['keep_lead'] ?? '') === '1';
         return [
             'error' => '',
@@ -315,6 +350,21 @@ function pcs_crm_action(PDO $db, array $post): array
             'ok' => 'Nota guardada.',
             'query' => ['stage' => (int) $leadStage, 'lead' => $leadId],
         ];
+    }
+
+    if ($action === 'log_touch') {
+        $kind = (string) ($post['kind'] ?? '');
+        $ajax = (string) ($post['ajax'] ?? '') === '1';
+        if ($leadId < 1 || ($kind !== 'call' && $kind !== 'whatsapp')) {
+            return ['error' => 'No se ha podido registrar.', 'ok' => '', 'query' => $back, 'ajax' => $ajax];
+        }
+        $exists = $db->prepare('SELECT id FROM leads WHERE id = ?');
+        $exists->execute([$leadId]);
+        if ($exists->fetchColumn() === false) {
+            return ['error' => 'Ese lead ya no está.', 'ok' => '', 'query' => $back, 'ajax' => $ajax];
+        }
+        pcs_log_event($db, $leadId, $kind, '');
+        return ['error' => '', 'ok' => '', 'query' => ['stage' => (int) ($post['back_stage'] ?? 0), 'lead' => $leadId], 'ajax' => $ajax];
     }
 
     return $fail('Acción no reconocida.');
@@ -413,14 +463,22 @@ header('Referrer-Policy: no-referrer');
     .column { display: none; padding: 14px; }
     .column.is-current { display: block; }
     .column-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .icon-btn { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 999px; border: 1px solid #d5cbbd; background: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0; color: #1c211c; }
+    .icon-btn[aria-expanded="true"] { background: #e5f4f2; border-color: #0a7b71; color: #0a7b71; }
+    .edit { display: none; }
+    .edit.is-open { display: grid; }
     .column h2 { margin: 0; font-size: 1.15rem; }
     .muted { color: #5e675e; font-size: 0.85rem; }
     details summary { cursor: pointer; color: #0a7b71; font-size: 0.85rem; }
-    .edit { display: grid; gap: 8px; margin-top: 10px; }
+    .edit.is-open { gap: 8px; margin-top: 10px; }
     .row { display: flex; gap: 8px; }
     .lead { padding: 14px; margin-top: 10px; }
     .lead h3 { margin: 0; font-size: 1.12rem; }
-    .lead h3 a { color: inherit; text-decoration: none; }
+    .lead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .lead-main { display: block; min-width: 0; color: inherit; text-decoration: none; }
+    .lead-main:hover h3 { color: #0a7b71; }
+    .drag { display: none; }
+    .event-kind { margin: 6px 0 0; font-weight: 600; }
     .meta { margin: 6px 0 0; color: #5e675e; font-size: 0.9rem; }
     .quick { display: flex; gap: 8px; margin-top: 10px; }
     .quick a { flex: 1; }
@@ -447,7 +505,7 @@ header('Referrer-Policy: no-referrer');
       .pills { display: none; }
       .board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; padding-bottom: 12px; }
       .column, .column.is-current { display: flex; flex-direction: column; width: 320px; flex: 0 0 320px; min-height: 240px; }
-      .lead { cursor: grab; }
+      .drag { display: grid; place-items: center; width: 28px; height: 36px; cursor: grab; color: #5e675e; user-select: none; }
       .drawer { inset: 0 0 0 auto; width: min(440px, 100%); box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
     }
   </style>
@@ -535,10 +593,14 @@ header('Referrer-Policy: no-referrer');
                 <h2><?= h((string) $stage['name']) ?></h2>
                 <p class="muted"><?= count($columnLeads) ?> <?= count($columnLeads) === 1 ? 'lead' : 'leads' ?></p>
               </div>
+              <button type="button" class="icon-btn" data-edit-stage aria-expanded="false" aria-controls="stage-edit-<?= $stageId ?>" aria-label="Editar etapa">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"></path>
+                  <path d="M13.5 6.5l3 3"></path>
+                </svg>
+              </button>
             </div>
-            <details>
-              <summary>Editar etapa</summary>
-              <div class="edit">
+            <div class="edit" id="stage-edit-<?= $stageId ?>">
                 <form method="post" class="row">
                   <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
                   <input type="hidden" name="action" value="rename_stage">
@@ -570,7 +632,6 @@ header('Referrer-Policy: no-referrer');
                   <button class="btn danger small" type="submit">Eliminar etapa</button>
                 </form>
               </div>
-            </details>
             <?php if ($columnLeads === []): ?>
               <p class="empty">Esta etapa está vacía.</p>
             <?php endif; ?>
@@ -586,19 +647,24 @@ header('Referrer-Policy: no-referrer');
                 $whatsapp = pcs_lead_whatsapp($rawPhone, $rawName);
                 $search = mb_strtolower($displayName . ' ' . $rawPhone . ' ' . $preferenceLabel . ' ' . (string) ($lead['utm_source'] ?? '') . ' ' . (string) ($lead['utm_campaign'] ?? '') . ' ' . (string) ($lead['referrer'] ?? ''));
               ?>
-              <article class="lead" draggable="false" data-lead="<?= $id ?>" data-search="<?= h($search) ?>">
-                <h3><a href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>"><?= h($displayName) ?></a></h3>
-                <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?></p>
-                <?php if ($preferenceLabel !== '' || $partial): ?>
-                  <p>
-                    <?php if ($preferenceLabel !== ''): ?><span class="tag"><?= h($preferenceLabel) ?></span><?php endif; ?>
-                    <?php if ($partial): ?><span class="tag warn">Incompleta</span><?php endif; ?>
-                  </p>
-                <?php endif; ?>
-                <p class="meta"><?= h(pcs_origin_label($lead)) ?></p>
+              <article class="lead" data-lead="<?= $id ?>" data-search="<?= h($search) ?>">
+                <div class="lead-top">
+                  <a class="lead-main" href="<?= h(pcs_admin_url(['stage' => $stageId, 'lead' => $id])) ?>">
+                    <h3><?= h($displayName) ?></h3>
+                    <p class="meta"><?= h(pcs_when((string) $lead['created_at'])) ?> · <?= (int) $lead['note_count'] ?> <?= (int) $lead['note_count'] === 1 ? 'nota' : 'notas' ?></p>
+                    <?php if ($preferenceLabel !== '' || $partial): ?>
+                      <p>
+                        <?php if ($preferenceLabel !== ''): ?><span class="tag"><?= h($preferenceLabel) ?></span><?php endif; ?>
+                        <?php if ($partial): ?><span class="tag warn">Incompleta</span><?php endif; ?>
+                      </p>
+                    <?php endif; ?>
+                    <p class="meta"><?= h(pcs_origin_label($lead)) ?></p>
+                  </a>
+                  <span class="drag" draggable="true" title="Arrastrar a otra etapa">⠿</span>
+                </div>
                 <div class="quick">
-                  <?php if ($phoneHref !== ''): ?><a class="btn ghost small" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
-                  <?php if ($whatsapp !== ''): ?><a class="btn ghost small" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
+                  <?php if ($phoneHref !== ''): ?><a class="btn ghost small" data-touch="call" data-lead="<?= $id ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
+                  <?php if ($whatsapp !== ''): ?><a class="btn ghost small" data-touch="whatsapp" data-lead="<?= $id ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
                 </div>
                 <form method="post" class="move">
                   <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
@@ -637,8 +703,8 @@ header('Referrer-Policy: no-referrer');
       </div>
       <h2 id="lead-title"><?= h($openName !== '' ? $openName : 'Sin nombre') ?></h2>
       <div class="quick">
-        <?php if ($phoneHref !== ''): ?><a class="btn" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
-        <?php if ($whatsapp !== ''): ?><a class="btn ghost" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
+        <?php if ($phoneHref !== ''): ?><a class="btn" data-touch="call" data-lead="<?= $openId ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
+        <?php if ($whatsapp !== ''): ?><a class="btn ghost" data-touch="whatsapp" data-lead="<?= $openId ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
       </div>
       <ul class="facts">
         <li><?= h($openPhone !== '' ? $openPhone : 'Sin teléfono') ?></li>
@@ -683,7 +749,7 @@ header('Referrer-Policy: no-referrer');
           </form>
         <?php endforeach; ?>
       </div>
-      <h3>Notas</h3>
+      <h3>Historial</h3>
       <form method="post" class="composer">
         <input type="hidden" name="csrf" value="<?= h((string) $_SESSION['csrf']) ?>">
         <input type="hidden" name="action" value="add_note">
@@ -692,13 +758,53 @@ header('Referrer-Policy: no-referrer');
         <textarea id="note-body" name="body" maxlength="2000" required placeholder="Qué has hablado, cuándo vuelve, qué hay que mirar…"></textarea>
         <p><button class="btn" type="submit">Guardar nota</button></p>
       </form>
-      <?php if ($notes === []): ?>
-        <p class="empty">Todavía no hay notas.</p>
-      <?php endif; ?>
-      <?php foreach ($notes as $note): ?>
+      <?php
+        $timeline = [[
+            'at' => (string) $openLead['created_at'],
+            'kind' => 'created',
+            'detail' => pcs_origin_label($openLead),
+        ]];
+        foreach ($notes as $note) {
+            $timeline[] = ['at' => (string) $note['created_at'], 'kind' => 'note', 'detail' => (string) $note['body']];
+        }
+        foreach ($events as $event) {
+            if ((string) $event['kind'] === 'note') {
+                continue;
+            }
+            $timeline[] = [
+                'at' => (string) $event['created_at'],
+                'kind' => (string) $event['kind'],
+                'detail' => (string) ($event['detail'] ?? ''),
+            ];
+        }
+        usort($timeline, static function (array $a, array $b): int {
+            return strcmp($b['at'], $a['at']);
+        });
+        $eventLabels = [
+            'created' => 'Entró',
+            'stage' => 'Cambió de etapa',
+            'note' => 'Nota',
+            'call' => 'Llamada',
+            'whatsapp' => 'WhatsApp',
+        ];
+      ?>
+      <?php foreach ($timeline as $item): ?>
+        <?php
+          $kind = (string) $item['kind'];
+          $detail = trim((string) $item['detail']);
+          $label = $eventLabels[$kind] ?? $kind;
+          if ($kind === 'created' && $detail !== '') {
+              $label .= ' · ' . $detail;
+              $detail = '';
+          } elseif ($kind === 'stage' && $detail !== '') {
+              $label .= ': ' . $detail;
+              $detail = '';
+          }
+        ?>
         <article class="note">
-          <time class="muted" datetime="<?= h((string) $note['created_at']) ?>"><?= h(pcs_when((string) $note['created_at'])) ?></time>
-          <p><?= nl2br(h((string) $note['body'])) ?></p>
+          <time class="muted" datetime="<?= h((string) $item['at']) ?>"><?= h(pcs_when((string) $item['at'])) ?></time>
+          <p class="event-kind"><?= h($label) ?></p>
+          <?php if ($detail !== ''): ?><p><?= nl2br(h($detail)) ?></p><?php endif; ?>
         </article>
       <?php endforeach; ?>
     </section>
@@ -714,12 +820,43 @@ header('Referrer-Policy: no-referrer');
         });
       });
     }
+    document.querySelectorAll("[data-edit-stage]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const panel = document.getElementById(button.getAttribute("aria-controls") || "");
+        if (!panel) return;
+        const open = !panel.classList.contains("is-open");
+        document.querySelectorAll(".edit.is-open").forEach((el) => el.classList.remove("is-open"));
+        document.querySelectorAll("[data-edit-stage]").forEach((el) => el.setAttribute("aria-expanded", "false"));
+        if (open) {
+          panel.classList.add("is-open");
+          button.setAttribute("aria-expanded", "true");
+        }
+      });
+    });
+    document.querySelectorAll("[data-lead]").forEach((card) => {
+      card.addEventListener("click", (event) => {
+        if (event.target.closest("a, button, input, select, textarea, label, .drag")) return;
+        const link = card.querySelector(".lead-main");
+        if (link) window.location.href = link.href;
+      });
+    });
+    document.querySelectorAll("[data-touch]").forEach((link) => {
+      link.addEventListener("click", () => {
+        const params = new URLSearchParams();
+        params.set("csrf", document.querySelector("input[name=csrf]")?.value || "");
+        params.set("action", "log_touch");
+        params.set("ajax", "1");
+        params.set("lead_id", link.getAttribute("data-lead") || "");
+        params.set("kind", link.getAttribute("data-touch") || "");
+        if (navigator.sendBeacon) navigator.sendBeacon("/admin.php", params);
+      });
+    });
     const desktop = window.matchMedia("(min-width: 900px)").matches;
     if (desktop) {
-      document.querySelectorAll("[data-lead]").forEach((card) => {
-        card.draggable = true;
-        card.addEventListener("dragstart", (event) => {
-          event.dataTransfer.setData("text/plain", card.getAttribute("data-lead") || "");
+      document.querySelectorAll(".drag").forEach((handle) => {
+        handle.addEventListener("dragstart", (event) => {
+          const card = handle.closest("[data-lead]");
+          event.dataTransfer.setData("text/plain", card?.getAttribute("data-lead") || "");
           event.dataTransfer.effectAllowed = "move";
         });
       });
