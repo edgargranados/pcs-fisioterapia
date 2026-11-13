@@ -635,8 +635,12 @@ header('Referrer-Policy: no-referrer');
     .drawer-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .drawer h2 { margin: 0; font-size: 1.8rem; letter-spacing: -0.03em; }
     .sheet { display: grid; gap: 28px; margin-top: 18px; }
-    .prop { margin-top: 16px; }
-    .prop-label { margin: 0 0 2px; font-size: 0.78rem; font-weight: 650; }
+    .prop { display: grid; grid-template-areas: "label" "value"; margin-top: 16px; }
+    .prop-name { grid-template-areas: "value"; }
+    .prop-label { grid-area: label; margin: 0 0 2px; font-size: 0.78rem; font-weight: 650; }
+    .prop-value, .prop-form, .prop-static { grid-area: value; }
+    .prop-value[hidden], .prop-form[hidden] { display: none !important; }
+    .prop-form { margin: 0; }
     .prop-value { display: block; width: 100%; margin: 0; padding: 0; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: text; }
     .prop-value.is-empty { color: #8a918a; }
     .prop-name { margin-top: 12px; }
