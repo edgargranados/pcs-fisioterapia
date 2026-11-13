@@ -1,8 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
+import { BookButton } from "@/components/appointment-wizard";
 import { BookForm } from "@/components/book-form";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { FaqList } from "@/components/faq-list";
+import { HeroVideo } from "@/components/hero-video";
 import { JsonLd } from "@/components/json-ld";
+import { MobileCtaBar } from "@/components/mobile-cta-bar";
 import { SiteShell } from "@/components/site-shell";
 import { orderedTherapies } from "@/content/therapies";
 import { townBySlug, type Town } from "@/content/towns";
@@ -18,16 +22,24 @@ export function TownView({ locale, town }: { locale: Locale; town: Town }) {
   const alternate = zonePath(locale === "es" ? "ca" : "es", town.slug);
   const place = locale === "ca" ? "a prop de" : "cerca de";
   const minutes =
+    locale === "ca" ? `uns ${town.minutes} minuts en cotxe` : `unos ${town.minutes} minutos en coche`;
+  const lede =
     locale === "ca"
-      ? `uns ${town.minutes} minuts en cotxe`
-      : `unos ${town.minutes} minutos en coche`;
+      ? `${minutes[0].toUpperCase()}${minutes.slice(1)} fins a ${clinic.street}, ${clinic.city}.`
+      : `${minutes[0].toUpperCase()}${minutes.slice(1)} hasta ${clinic.street}, ${clinic.city}.`;
+  const road = locale === "ca" ? town.road.ca : town.road.es;
+  const crumbs = [
+    { name: copy.crumbsHome, href: homePath(locale) },
+    { name: copy.zones, href: locale === "ca" ? "/ca/zones" : "/zonas" },
+    { name: town.name },
+  ];
   const faq = [
     {
       q: locale === "ca" ? `Quant es tarda des de ${town.name}?` : `¿Cuánto se tarda desde ${town.name}?`,
       a:
         locale === "ca"
-          ? `Orientativament, ${minutes} (${town.km} km), ${town.road.ca}, fins a ${clinic.street}. El trànsit de la C-32 ho pot allargar.`
-          : `Orientativamente, ${minutes} (${town.km} km), ${town.road.es}, hasta ${clinic.street}. El tráfico de la C-32 lo puede alargar.`,
+          ? `${lede} El camí: ${road}. El trànsit de la C-32 ho pot allargar.`
+          : `${lede} El camino: ${road}. El tráfico de la C-32 lo puede alargar.`,
     },
     {
       q: locale === "ca" ? "Cal ser soci d'Oikos?" : "¿Hay que ser socio de Oikos?",
@@ -36,7 +48,7 @@ export function TownView({ locale, town }: { locale: Locale; town: Town }) {
   ];
 
   return (
-    <SiteShell locale={locale} alternateHref={alternate}>
+    <SiteShell locale={locale} alternateHref={alternate} hideMobileCta>
       <JsonLd data={faqJsonLd(faq)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -45,51 +57,49 @@ export function TownView({ locale, town }: { locale: Locale; town: Town }) {
           { name: town.name, path },
         ])}
       />
-      <article>
-        <header className="mx-auto w-full max-w-6xl px-5 pb-6 pt-12 md:pt-16">
-          <Breadcrumbs
-            items={[
-              { name: copy.crumbsHome, href: homePath(locale) },
-              { name: copy.zones, href: locale === "ca" ? "/ca/zones" : "/zonas" },
-              { name: town.name },
-            ]}
-          />
-          <p className="mt-8 text-xs uppercase tracking-[0.18em] text-primary">
-            {locale === "ca" ? "Fisioterapeuta a Mataró" : "Fisioterapeuta en Mataró"}
-          </p>
-          <h1 className="mt-3 max-w-3xl font-serif text-4xl leading-[1.02] tracking-tight md:text-6xl">
-            {locale === "ca" ? "Fisioterapeuta" : "Fisioterapeuta"} {place} {town.name}
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">{town.intro[locale]}</p>
-        </header>
-        <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-8 md:grid-cols-12">
-          <div className="space-y-5 text-[17px] leading-8 md:col-span-7">
-            <p>{town.local[locale]}</p>
-            <p>{town.who[locale]}</p>
-            <p>
-              {locale === "ca"
-                ? `La visita és amb hora prèvia a ${clinic.place}, ${clinic.street}, ${clinic.postalCode} ${clinic.city}. El camí: ${town.road.ca}.`
-                : `La visita es hace con cita previa en ${clinic.place}, ${clinic.street}, ${clinic.postalCode} ${clinic.city}. El camino: ${town.road.es}.`}
-            </p>
-            <p className="text-sm text-muted-foreground">{copy.emergency}</p>
+      <section className="home-hero relative overflow-hidden bg-[#141815] text-[#f6f3ec]">
+        <Image
+          src="/media/hero-poster.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[center_30%]"
+        />
+        <HeroVideo />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,20,17,0.5)_0%,rgba(16,20,17,0.28)_42%,rgba(16,20,17,0.62)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(16,20,17,0.82)_0%,rgba(16,20,17,0.42)_52%,rgba(16,20,17,0.12)_100%)]" />
+        <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col justify-between px-5 py-6 md:py-10">
+          <Breadcrumbs items={crumbs} light />
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.28em] text-[#f6f3ec]/85">{copy.heroBrand}</p>
+            <h1 className="mt-4 max-w-4xl font-serif text-[2.5rem] leading-[1.05] tracking-[-0.03em] sm:text-6xl">
+              {locale === "ca" ? "Fisioterapeuta" : "Fisioterapeuta"} {place} {town.name}
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-[#f6f3ec]/90 sm:text-lg">{lede}</p>
+            <div className="mt-8">
+              <BookButton className="inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 text-base font-medium text-primary-foreground hover:bg-[#08685f]">
+                {copy.heroCta}
+              </BookButton>
+            </div>
+            <p className="mt-6 text-sm tracking-wide text-[#f6f3ec]/85">{copy.heroPlace}</p>
           </div>
-          <aside className="rounded-[1.4rem] border border-border p-6 md:col-span-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-primary">{minutes}</p>
-            <p className="mt-3 font-serif text-3xl tracking-tight">{clinic.street}</p>
-            <p className="mt-2 text-muted-foreground">
-              {clinic.postalCode} {clinic.city}
-            </p>
-            <a href={clinic.maps} target="_blank" rel="noopener noreferrer" className="mt-5 inline-block text-sm underline underline-offset-4">
-              {copy.howToGet}
-            </a>
-            <p className="mt-6 text-sm">
-              <Link href={mataroPath(locale)} className="underline underline-offset-4">
-                {copy.mataroTitle}
-              </Link>
-            </p>
-          </aside>
         </div>
-        <section className="mx-auto w-full max-w-6xl px-5 py-6">
+      </section>
+
+      <MobileCtaBar label={copy.book} dock="under-hero" />
+
+      <article>
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-5 py-8 sm:flex-row sm:items-end sm:justify-between">
+          <p className="max-w-xl text-base leading-7">
+            {locale === "ca" ? "El camí" : "El camino"}: {road}. {clinic.place}, {clinic.street}.
+          </p>
+          <a href={clinic.maps} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm underline underline-offset-4">
+            {copy.howToGet}
+          </a>
+        </div>
+
+        <section className="mx-auto w-full max-w-6xl px-5 py-4">
           <h2 className="font-serif text-3xl">{copy.therapies}</h2>
           <ul className="mt-4 flex flex-wrap gap-2">
             {orderedTherapies().map((therapy) => (
@@ -100,11 +110,19 @@ export function TownView({ locale, town }: { locale: Locale; town: Town }) {
               </li>
             ))}
           </ul>
+          <p className="mt-6">
+            <Link href={mataroPath(locale)} className="text-sm underline underline-offset-4">
+              {copy.mataroTitle}
+            </Link>
+          </p>
         </section>
+
         <section className="mx-auto w-full max-w-6xl px-5 py-6">
           <h2 className="font-serif text-2xl">{copy.faqTitle}</h2>
           <FaqList items={faq} />
+          <p className="mt-4 text-sm text-muted-foreground">{copy.emergency}</p>
         </section>
+
         <section className="mx-auto w-full max-w-6xl px-5 py-6">
           <h2 className="font-serif text-2xl">{copy.nearby}</h2>
           <ul className="mt-4 flex flex-wrap gap-2">
@@ -121,6 +139,7 @@ export function TownView({ locale, town }: { locale: Locale; town: Town }) {
             })}
           </ul>
         </section>
+
         <section id="cita" className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-12 pb-28 md:grid-cols-12">
           <div className="md:col-span-5">
             <h2 className="font-serif text-4xl tracking-tight">{copy.formTitle}</h2>
