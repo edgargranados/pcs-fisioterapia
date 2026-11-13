@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
   const step = parseStep(record.step);
   if (!step) return fail("lead");
-  if (!hasConsent(record)) return fail("consent");
+  if ((step === "phone" || step === "email") && !hasConsent(record)) return fail("consent");
   const locale = parseLocale(record.locale);
   if (!locale) return fail("locale");
 

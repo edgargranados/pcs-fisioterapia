@@ -260,7 +260,7 @@ function AppointmentDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           step: current,
-          consent: true,
+          consent,
           locale,
           page: pageForLead(pageRef.current),
           company: companyRef.current?.value ?? "",
@@ -303,11 +303,6 @@ function AppointmentDialog({
   }
 
   function choose(value: Preference) {
-    if (!consent) {
-      setErrorCode("consent");
-      setError(copy.errors.consent);
-      return;
-    }
     setPreference(value);
     void send("preference", { preference: value });
   }
@@ -362,7 +357,14 @@ function AppointmentDialog({
           onSubmit={(event) => {
             event.preventDefault();
             if (step === "name") void send("name", { name });
-            if (step === "phone") void send("phone", { phone });
+            if (step === "phone") {
+              if (!consent) {
+                setErrorCode("consent");
+                setError(copy.errors.consent);
+                return;
+              }
+              void send("phone", { phone });
+            }
             if (step === "email") void send("email", { email });
           }}
         >
@@ -412,36 +414,16 @@ function AppointmentDialog({
               </p>
 
               {step === "preference" ? (
-                <div className="mt-6 flex flex-1 flex-col">
-                  <label htmlFor={consentId} className="flex items-start gap-3 rounded-2xl bg-card p-4 text-sm leading-6 text-muted-foreground">
-                    <input
-                      id={consentId}
-                      data-initial-focus
-                      type="checkbox"
-                      checked={consent}
-                      onChange={(event) => {
-                        setConsent(event.target.checked);
-                        if (event.target.checked && errorCode === "consent") {
-                          setError("");
-                          setErrorCode("");
-                        }
-                      }}
-                      className="mt-1 size-5 accent-[#0a7b71]"
-                    />
-                    <span>
-                      {copy.formConsent}{" "}
-                      <a href={privacyPath(locale)} target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4">
-                        {copy.formPrivacy}
-                      </a>
-                    </span>
-                  </label>
-                  {error ? <ErrorText>{error}</ErrorText> : null}
-                  {errorCode === "lead" ? (
-                    <button type="button" className="mt-3 text-sm text-[#0a7b71] underline" onClick={reset}>
-                      {copy.wizardRestart}
-                    </button>
-                  ) : null}
-                </div>
+                error || errorCode === "lead" ? (
+                  <div className="mt-6">
+                    {error ? <ErrorText>{error}</ErrorText> : null}
+                    {errorCode === "lead" ? (
+                      <button type="button" className="mt-3 text-sm text-[#0a7b71] underline" onClick={reset}>
+                        {copy.wizardRestart}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null
               ) : (
                 <div className="mt-6">
                   {step === "name" ? (
@@ -487,7 +469,7 @@ function AppointmentDialog({
                       />
                     </Field>
                   ) : null}
-                  {error ? <ErrorText>{error}</ErrorText> : null}
+                  {error && step !== "phone" ? <ErrorText>{error}</ErrorText> : null}
                   {errorCode === "lead" ? (
                     <button type="button" className="mt-3 self-start text-sm text-[#0a7b71] underline" onClick={reset}>
                       {copy.wizardRestart}
@@ -534,6 +516,7 @@ function AppointmentDialog({
                   type="button"
                   disabled={pending !== null}
                   aria-pressed={preference === value}
+                  data-initial-focus={value === "morning" ? true : undefined}
                   onClick={() => choose(value)}
                   className="flex h-16 items-center justify-between rounded-2xl border border-border bg-card px-5 text-left font-serif text-2xl hover:border-[#0a7b71] disabled:opacity-60 aria-pressed:border-[#0a7b71] aria-pressed:bg-[#e5f4f2]"
                 >
@@ -550,6 +533,32 @@ function AppointmentDialog({
             </div>
           ) : (
             <div className="grid gap-3">
+              {step === "phone" ? (
+                <>
+                  <label htmlFor={consentId} className="flex items-start gap-3 rounded-2xl bg-card p-4 text-sm leading-6 text-muted-foreground">
+                    <input
+                      id={consentId}
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(event) => {
+                        setConsent(event.target.checked);
+                        if (event.target.checked && errorCode === "consent") {
+                          setError("");
+                          setErrorCode("");
+                        }
+                      }}
+                      className="mt-1 size-5 accent-[#0a7b71]"
+                    />
+                    <span>
+                      {copy.formConsent}{" "}
+                      <a href={privacyPath(locale)} target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4">
+                        {copy.formPrivacy}
+                      </a>
+                    </span>
+                  </label>
+                  {error ? <ErrorText>{error}</ErrorText> : null}
+                </>
+              ) : null}
               <button
                 type="submit"
                 disabled={pending !== null}
