@@ -462,7 +462,7 @@ header('Referrer-Policy: no-referrer');
     .pills a.is-on { background: #0a7b71; border-color: #0a7b71; color: #f6f3ec; }
     .pills span { font-size: 0.8rem; opacity: 0.8; }
     .board { display: block; }
-    .column { display: none; padding: 14px; background: #e7f1ef; border-color: #d3e4e1; }
+    .column { display: none; padding: 14px; background: var(--stage, #e7f1ef); border-top: 4px solid var(--stage-line, #0a7b71); }
     .column.is-current { display: block; }
     .column-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
     .stage-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -601,8 +601,19 @@ header('Referrer-Policy: no-referrer');
             $deleteMessage = $targetName === ''
                 ? '¿Eliminar esta etapa?'
                 : 'Los leads de esta etapa pasarán a ' . $targetName . '. ¿Eliminarla?';
+            $stageTones = [
+                ['#e5f3f1', '#0a7b71'],
+                ['#f6efe4', '#b8883d'],
+                ['#e8eef8', '#5d7eae'],
+                ['#f7eee9', '#c06a4a'],
+                ['#eef4e8', '#6d8f52'],
+                ['#f3eef6', '#8d6a9a'],
+                ['#e7f4f6', '#3d8f9a'],
+                ['#f8f0e4', '#a67c2d'],
+            ];
+            $stageTone = $stageTones[$stageId % count($stageTones)];
           ?>
-          <section class="column<?= $stageId === $activeStage ? ' is-current' : '' ?>" data-stage="<?= $stageId ?>">
+          <section class="column<?= $stageId === $activeStage ? ' is-current' : '' ?>" data-stage="<?= $stageId ?>" style="--stage: <?= $stageTone[0] ?>; --stage-line: <?= $stageTone[1] ?>">
             <div class="column-head">
               <div class="stage-title">
                 <?php $leadCount = count($columnLeads); ?>
