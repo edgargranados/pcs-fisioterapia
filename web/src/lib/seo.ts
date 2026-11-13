@@ -63,6 +63,7 @@ export function businessJsonLd(locale: Locale) {
     alternateName: locale === "ca" ? "Fisioteràpia Pol Carmona" : "Fisioterapia Pol Carmona",
     description,
     url: clinic.url,
+    sameAs: [clinic.instagram],
     image: [`${clinic.url}/media/pol-carmona.jpg`, `${clinic.url}/media/terapia-manual.jpg`],
     address: {
       "@type": "PostalAddress",

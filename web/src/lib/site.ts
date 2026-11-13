@@ -15,6 +15,7 @@ export const clinic = {
   lng: 2.42612,
   url: "https://pcsfisioterapia.com",
   maps: "https://www.google.com/maps/search/?api=1&query=Carrer+Via+S%C3%A8rgia+32%2C+08302+Matar%C3%B3",
+  instagram: "https://www.instagram.com/pcsfisioterapia/",
   graduation: "UAB-EUG",
   graduationYears: "2020–2025",
 } as const;

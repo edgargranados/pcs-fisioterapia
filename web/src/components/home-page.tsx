@@ -209,6 +209,9 @@ export function HomePage({ locale }: { locale: Locale }) {
             <a href={clinic.maps} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
               {copy.howToGet}
             </a>
+            <a href={clinic.instagram} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+              Instagram
+            </a>
           </div>
         </div>
         <iframe

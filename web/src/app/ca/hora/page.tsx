@@ -34,6 +34,10 @@ export default function Page() {
             {copy.factAddressValue}
             <br />
             {copy.college}
+            <br />
+            <a href={clinic.instagram} className="underline underline-offset-4" target="_blank" rel="noopener noreferrer">
+              Instagram
+            </a>
           </p>
         </div>
         <div id="cita" className="md:col-span-7">
