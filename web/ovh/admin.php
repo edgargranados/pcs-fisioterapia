@@ -510,17 +510,22 @@ header('Referrer-Policy: no-referrer');
     .composer { padding: 12px; margin-top: 8px; }
     .column.over { outline: 2px dashed #0a7b71; outline-offset: 3px; }
     @media (min-width: 900px) {
-      .wrap { padding: 20px 24px 48px; }
-      .toolbar { grid-template-columns: minmax(0, 1fr) 320px; align-items: center; }
+      body.app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+      body.app .top { flex: none; }
+      body.app .wrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 16px 24px 12px; }
+      .toolbar { flex: none; grid-template-columns: minmax(0, 1fr) 320px; align-items: center; }
       .pills { display: none; }
-      .board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; padding-bottom: 12px; }
-      .column, .column.is-current { display: flex; flex-direction: column; width: 320px; flex: 0 0 320px; min-height: 240px; }
+      .board { flex: 1 1 auto; min-height: 0; display: flex; gap: 12px; align-items: stretch; overflow-x: auto; overflow-y: hidden; }
+      .column, .column.is-current { display: flex; flex-direction: column; width: 320px; flex: 0 0 320px; height: auto; max-height: 100%; min-height: 0; padding: 0; overflow: hidden; }
+      .column-head { flex: none; padding: 14px 14px 8px; }
+      .edit.is-open { flex: none; margin: 0 14px 4px; }
+      .column-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 14px 14px; }
       .drag { display: grid; place-items: center; width: 28px; height: 36px; cursor: grab; color: #5e675e; user-select: none; }
       .drawer { inset: 0 0 0 auto; width: min(440px, 100%); box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
     }
   </style>
 </head>
-<body>
+<body<?= $signedIn ? ' class="app"' : '' ?>>
 <?php if ($hash === ''): ?>
   <main class="gate">
     <p class="brand">PCS Fisioterapia</p>
@@ -643,6 +648,7 @@ header('Referrer-Policy: no-referrer');
                   <button class="btn danger small" type="submit">Eliminar etapa</button>
                 </form>
               </div>
+            <div class="column-body">
             <?php if ($columnLeads === []): ?>
               <p class="empty">Esta etapa está vacía.</p>
             <?php endif; ?>
@@ -685,6 +691,7 @@ header('Referrer-Policy: no-referrer');
                 </form>
               </article>
             <?php endforeach; ?>
+            </div>
           </section>
         <?php endforeach; ?>
       </div>
