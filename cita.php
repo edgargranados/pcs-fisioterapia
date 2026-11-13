@@ -40,7 +40,7 @@ if (!in_array($step, ['preference', 'name', 'phone', 'email'], true)) {
     pcs_json(400, ['ok' => false, 'error' => 'lead']);
 }
 
-if (($body['consent'] ?? null) !== true) {
+if (($step === 'phone' || $step === 'email') && ($body['consent'] ?? null) !== true) {
     pcs_json(400, ['ok' => false, 'error' => 'consent']);
 }
 
