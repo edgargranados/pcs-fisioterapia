@@ -502,7 +502,7 @@ function pcs_ago(string $value): string
     return pcs_when($value);
 }
 
-function pcs_activity_icon(string $kind): string
+function pcs_activity_icon(string $kind, int $size = 16): string
 {
     $paths = [
         'call' => '<path d="M8 3h2l1 4-2 1a11 11 0 0 0 6 6l1-2 4 1v2a2 2 0 0 1-2 2A15 15 0 0 1 6 5a2 2 0 0 1 2-2z"/>',
@@ -513,7 +513,7 @@ function pcs_activity_icon(string $kind): string
         'note' => '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 16h6"/>',
     ];
     $path = $paths[$kind] ?? $paths['note'];
-    return '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
+    return '<svg viewBox="0 0 24 24" width="' . $size . '" height="' . $size . '" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' . $path . '</svg>';
 }
 
 function pcs_preference_label(mixed $value): string
@@ -621,6 +621,7 @@ header('Referrer-Policy: no-referrer');
     .meta { margin: 2px 0 0; color: #5e675e; font-size: 0.78rem; line-height: 1.3; }
     .quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .quick .btn { flex: 1 1 auto; min-height: 32px; padding: 0 8px; font-size: 0.8rem; white-space: nowrap; }
+    .drawer .quick .btn { flex: 0 0 40px; width: 40px; min-height: 40px; padding: 0; }
     .quick [data-move] { flex: 0 0 auto; background: #dff3f1; color: #08685f; border-color: #8fcfc8; }
     .move { display: none; margin-top: 8px; }
     .move.is-open { display: block; }
@@ -686,7 +687,7 @@ header('Referrer-Policy: no-referrer');
       .drag { display: grid; place-items: center; width: 28px; height: 36px; cursor: grab; color: #5e675e; user-select: none; }
       .quick [data-move] { display: none; }
       .drawer { inset: 0 0 0 auto; width: min(960px, calc(100vw - 48px)); padding: 36px 40px 56px; box-shadow: -16px 0 40px rgba(28, 33, 28, 0.16); }
-      .sheet { grid-template-columns: minmax(240px, 0.85fr) minmax(280px, 1.15fr); gap: 40px; align-items: start; }
+      .sheet { grid-template-columns: minmax(200px, 0.62fr) minmax(300px, 1.38fr); gap: 48px; align-items: start; }
     }
   </style>
 </head>
@@ -916,8 +917,8 @@ header('Referrer-Policy: no-referrer');
             </div>
           <?php endforeach; ?>
           <div class="quick">
-            <?php if ($phoneHref !== ''): ?><a class="btn" data-touch="call" data-lead="<?= $openId ?>" href="<?= h($phoneHref) ?>">Llamar</a><?php endif; ?>
-            <?php if ($whatsapp !== ''): ?><a class="btn ghost" data-touch="whatsapp" data-lead="<?= $openId ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer">WhatsApp</a><?php endif; ?>
+            <?php if ($phoneHref !== ''): ?><a class="btn" data-touch="call" data-lead="<?= $openId ?>" href="<?= h($phoneHref) ?>" aria-label="Llamar" title="Llamar"><?= pcs_activity_icon('call', 18) ?></a><?php endif; ?>
+            <?php if ($whatsapp !== ''): ?><a class="btn ghost" data-touch="whatsapp" data-lead="<?= $openId ?>" href="<?= h($whatsapp) ?>" target="_blank" rel="noreferrer" aria-label="WhatsApp" title="WhatsApp"><?= pcs_activity_icon('whatsapp', 18) ?></a><?php endif; ?>
           </div>
           <div class="prop">
             <p class="prop-label">Franja</p>
