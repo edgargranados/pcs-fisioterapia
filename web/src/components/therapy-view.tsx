@@ -62,12 +62,13 @@ export function TherapyView({ locale, therapy }: { locale: Locale; therapy: Ther
             {therapy.paragraphs[locale].map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
-            <p className="text-sm leading-6 text-muted-foreground">{therapy.note[locale]}</p>
             <p className="text-sm leading-6 text-muted-foreground">{copy.disclaimer}</p>
           </div>
           <aside className="md:col-span-5">
             <div className="rounded-[1.4rem] bg-[#e7e1d4]/70 p-6">
-              <h2 className="font-serif text-2xl">{locale === "ca" ? "Per a qui" : "Para quién"}</h2>
+              <h2 className="font-serif text-2xl">
+                {therapy.asideTitle?.[locale] ?? (locale === "ca" ? "Per a qui" : "Para quién")}
+              </h2>
               <ul className="mt-4 space-y-3 text-sm leading-6">
                 {therapy.forWhom[locale].map((item) => (
                   <li key={item} className="border-t border-[#1c211c]/10 pt-3">
@@ -75,6 +76,9 @@ export function TherapyView({ locale, therapy }: { locale: Locale; therapy: Ther
                   </li>
                 ))}
               </ul>
+              {therapy.asideNote ? (
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">{therapy.asideNote[locale]}</p>
+              ) : null}
             </div>
           </aside>
         </div>
