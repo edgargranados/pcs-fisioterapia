@@ -26,9 +26,9 @@ const es = {
   emergency:
     "Un golpe fuerte, fiebre, una pérdida de fuerza brusca o un dolor en el pecho no esperan a la fisioterapia: eso es de urgencias.",
   heroBrand: "PCS Fisioterapia",
-  heroTitle: "Recupérate. Muévete. Supérate.",
+  heroTitle: "Valoración. Tratamiento. Recuperación.",
   heroLede:
-    "Fisioterapia deportiva y readaptación funcional. Te ayudo a recuperarte de las lesiones, mejorar tu movilidad y volver a practicar deporte con confianza.",
+    "Fisioterapia deportiva y readaptación funcional. Te ayudo a recuperarte de las lesiones, mejorar tu movilidad y volver a practicar deporte o disfrutar de las actividades de tu día a día con confianza.",
   heroCta: "Pide tu cita",
   heroPlace: "Mataró · Carrer Via Sèrgia, 32",
   servicesTitle: "Servicios",
@@ -203,9 +203,9 @@ const ca = {
   emergency:
     "Un cop fort, febre, una pèrdua de força sobtada o un dolor al pit no esperen la fisioteràpia: això és d'urgències.",
   heroBrand: "PCS Fisioterapia",
-  heroTitle: "Recupera't. Mou-te. Supera't.",
+  heroTitle: "Valoració. Tractament. Recuperació.",
   heroLede:
-    "Fisioteràpia esportiva i readaptació funcional. T'ajudo a recuperar-te de les lesions, millorar la teva mobilitat i tornar a practicar esport amb confiança.",
+    "Fisioteràpia esportiva i readaptació funcional. T'ajudo a recuperar-te de les lesions, millorar la teva mobilitat i tornar a practicar esport o gaudir de les activitats del teu dia a dia amb confiança.",
   heroCta: "Demana la teva cita",
   heroPlace: "Mataró · Carrer Via Sèrgia, 32",
   servicesTitle: "Serveis",

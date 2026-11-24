@@ -11,7 +11,8 @@ export type Therapy = {
   summary: Record<Locale, string>;
   paragraphs: Record<Locale, string[]>;
   forWhom: Record<Locale, string[]>;
-  note: Record<Locale, string>;
+  asideTitle?: Record<Locale, string>;
+  asideNote?: Record<Locale, string>;
   faq: Record<Locale, Faq[]>;
 };
 
@@ -31,61 +32,59 @@ export const therapies: Therapy[] = [
     },
     paragraphs: {
       es: [
-        "La terapia manual es el trabajo con las manos: movilización articular, tejido blando y un contacto que busca devolver movimiento donde el dolor lo ha cerrado. En Mataró, Pol la usa como primera herramienta cuando una espalda, un hombro o un cuello no dejan entrenar ni trabajar a gusto.",
-        "No es un masaje para «quitar contracturas» y ya. Sirve para que la zona acepte carga otra vez. Por eso casi siempre va seguida de ejercicio terapéutico: lo que se gana en la camilla se tiene que poder usar al día siguiente en el box, corriendo o en la oficina.",
-        "En la visita se decide cuánta mano hace falta. A veces es el centro de la sesión. A veces son unos minutos para poder punzar, aplicar neuromodulación o enseñar un ejercicio sin que el dolor mande.",
+        "La terapia manual es una herramienta fundamental en fisioterapia que utiliza diferentes técnicas manuales para mejorar la movilidad, reducir el dolor y favorecer la recuperación de los tejidos.",
+        "A través de movilizaciones articulares, técnicas de tejido blando y otras intervenciones específicas, trabajamos para recuperar la funcionalidad y facilitar el movimiento.",
+        "Cada tratamiento se adapta a las necesidades de cada persona, teniendo en cuenta su situación, sus objetivos y las actividades que quiere volver a realizar, tanto en el día a día como en la práctica deportiva.",
+        "La terapia manual se combina con ejercicio terapéutico y otras técnicas de fisioterapia cuando es necesario, con el objetivo de conseguir una recuperación completa y duradera.",
       ],
       ca: [
-        "La teràpia manual és el treball amb les mans: mobilització articular, teixit tou i un contacte que busca tornar moviment on el dolor l'ha tancat. A Mataró, Pol la fa servir com a primera eina quan una esquena, una espatlla o un coll no deixen entrenar ni treballar a gust.",
-        "No és un massatge per «treure contractures» i prou. Serveix perquè la zona accepti càrrega una altra vegada. Per això gairebé sempre va seguida d'exercici terapèutic: el que es guanya a la llitera s'ha de poder fer servir l'endemà al box, corrent o a l'oficina.",
-        "A la visita es decideix quanta mà cal. De vegades és el centre de la sessió. De vegades són uns minuts per poder punxar, aplicar neuromodulació o ensenyar un exercici sense que el dolor mani.",
+        "La teràpia manual és una eina fonamental en fisioteràpia que utilitza diferents tècniques manuals per millorar la mobilitat, reduir el dolor i afavorir la recuperació dels teixits.",
+        "A través de mobilitzacions articulars, tècniques de teixit tou i altres intervencions específiques, treballem per recuperar la funcionalitat i facilitar el moviment.",
+        "Cada tractament s'adapta a les necessitats de cada persona, tenint en compte la seva situació, els seus objectius i les activitats que vol tornar a realitzar, tant en el dia a dia com en la pràctica esportiva.",
+        "La teràpia manual es combina amb exercici terapèutic i altres tècniques de fisioteràpia quan és necessari, amb l'objectiu d'aconseguir una recuperació completa i duradora.",
       ],
     },
     forWhom: {
       es: [
-        "Dolor de espalda, cuello o cabeza que limita el día",
-        "Hombro, cadera o rodilla cortos de movimiento",
-        "Después de un gesto brusco entrenando, antes de volver a cargar",
-        "Quien quiere entender qué pasa, no solo que le crujan la espalda",
+        "Personas con dolor musculoesquelético que interfiere en su día a día.",
+        "Personas con limitaciones de movilidad en el hombro, la cadera o la rodilla.",
+        "Deportistas que han sufrido una lesión o molestia, tanto durante el entrenamiento como en su día a día, y quieren volver a practicar deporte y recuperar su funcionalidad.",
+        "Personas que quieren entender el origen de sus molestias y participar activamente en su proceso de recuperación.",
       ],
       ca: [
-        "Dolor d'esquena, coll o cap que limita el dia",
-        "Espatlla, maluc o genoll curts de moviment",
-        "Després d'un gest brusc entrenant, abans de tornar a carregar",
-        "Qui vol entendre què passa, no només que li facin cruixir l'esquena",
+        "Persones amb dolor musculoesquelètic que interfereix en el seu dia a dia.",
+        "Persones amb limitacions de mobilitat a l'espatlla, el maluc o el genoll.",
+        "Esportistes que han patit una lesió o molèstia, tant durant l'entrenament com en el seu dia a dia, i volen tornar a practicar esport i recuperar la seva funcionalitat.",
+        "Persones que volen entendre l'origen de les seves molèsties i participar activament en el seu procés de recuperació.",
       ],
-    },
-    note: {
-      es: "No sustituye al ejercicio si el objetivo es volver al deporte. Y no es un sitio donde se prometa una sesión milagro.",
-      ca: "No substitueix l'exercici si l'objectiu és tornar a l'esport. I no és un lloc on es prometi una sessió miracle.",
     },
     faq: {
       es: [
         {
-          q: "¿Duele la terapia manual?",
-          a: "Puede haber molestia mientras se mueve una zona irritable. Se gradúa. Si no puedes relajarte, se cambia el plan en la misma visita.",
+          q: "¿La terapia manual provoca molestias?",
+          a: "La terapia manual no debería generar molestias. Las técnicas se adaptan a cada persona, respetando siempre su sensibilidad y sus límites.",
         },
         {
           q: "¿Sirve si no hago deporte?",
-          a: "Sí. El trabajo de pie, el ordenador o cargar peso también son carga. En Mataró no solo viene gente del box.",
+          a: "Sí. La fisioterapia está indicada tanto para personas deportistas como para aquellas que quieren mejorar su día a día, aliviar el dolor y recuperar la movilidad y la funcionalidad.",
         },
         {
           q: "¿Cuántas sesiones hacen falta?",
-          a: "No hay un número de catálogo. Depende de qué no puedes hacer y de cómo responde tu cuerpo. Se habla en la primera visita, en Via Sèrgia 32.",
+          a: "Depende de cada caso, de la lesión y de la evolución de cada persona. En la primera visita hacemos una valoración y establecemos un plan de tratamiento adaptado a tus necesidades.",
         },
       ],
       ca: [
         {
-          q: "Fa mal la teràpia manual?",
-          a: "Pot haver-hi molèstia mentre es mou una zona irritable. Es gradua. Si no et pots relaxar, es canvia el pla a la mateixa visita.",
+          q: "La teràpia manual provoca molèsties?",
+          a: "La teràpia manual no hauria de generar molèsties. Les tècniques s'adapten a cada persona, respectant sempre la seva sensibilitat i els seus límits.",
         },
         {
           q: "Serveix si no faig esport?",
-          a: "Sí. La feina dreta, l'ordinador o carregar pes també són càrrega. A Mataró no només ve gent del box.",
+          a: "Sí. La fisioteràpia està indicada tant per a persones esportistes com per a aquelles que volen millorar el seu dia a dia, alleujar el dolor i recuperar la mobilitat i la funcionalitat.",
         },
         {
           q: "Quantes sessions calen?",
-          a: "No hi ha un número de catàleg. Depèn de què no pots fer i de com respon el teu cos. Se'n parla a la primera visita, a Via Sèrgia 32.",
+          a: "Depèn de cada cas, de la lesió i de l'evolució de cada persona. A la primera visita fem una valoració i establim un pla de tractament adaptat a les teves necessitats.",
         },
       ],
     },
@@ -105,61 +104,61 @@ export const therapies: Therapy[] = [
     },
     paragraphs: {
       es: [
-        "La punción seca es una aguja fina sobre un punto muscular sensible que cambia la forma de moverte. No es acupuntura: es una herramienta de fisioterapia para el punto gatillo y el músculo que no suelta.",
-        "En la consulta de Via Sèrgia se usa cuando el dolor tiene un componente muscular claro —gemelo, cuádriceps, glúteo, espalda, antebrazo— y la mano sola no llega. A menudo se nota un espasmo breve y local. Después la zona puede estar cargada unas horas. Es frecuente y se explica antes de pinchar.",
-        "No todo el mundo es candidato. En la visita se preguntan medicación, coagulación, miedo a la aguja, embarazo o una infección en la piel. Si no encaja, hay otras vías: terapia manual, neuromodulación o ejercicio.",
+        "La punción seca es una técnica de fisioterapia invasiva que se utiliza para tratar puntos de tensión muscular (puntos gatillo), que pueden provocar dolor y limitar el movimiento.",
+        "Durante la aplicación se puede notar una pequeña contracción muscular. Después, a veces, puede aparecer una ligera sensibilidad en la zona que suele desaparecer en poco tiempo.",
+        "La técnica se adapta a cada persona y se puede combinar con terapia manual y ejercicio terapéutico para favorecer la recuperación y mejorar la funcionalidad.",
       ],
       ca: [
-        "La punció seca és una agulla fina sobre un punt muscular sensible que canvia la manera de moure't. No és acupuntura: és una eina de fisioteràpia per al punt gallet i el múscul que no deixa anar.",
-        "A la consulta de Via Sèrgia es fa servir quan el dolor té un component muscular clar —bessó, quàdriceps, glutis, esquena, avantbraç— i la mà sola no hi arriba. Sovint es nota un espasme breu i local. Després la zona pot quedar carregada unes hores. És freqüent i s'explica abans de punxar.",
-        "No tothom és candidat. A la visita es pregunten medicació, coagulació, por de l'agulla, embaràs o una infecció a la pell. Si no encaixa, hi ha altres vies: teràpia manual, neuromodulació o exercici.",
+        "La punció seca és una tècnica de fisioteràpia invasiva que s'utilitza per tractar punts de tensió muscular (punts gallet), que poden provocar dolor i limitar el moviment.",
+        "Durant l'aplicació es pot notar una petita contracció muscular. Després, de vegades, pot aparèixer una lleugera sensibilitat a la zona que acostuma a desaparèixer en poc temps.",
+        "La tècnica s'adapta a cada persona i es pot combinar amb teràpia manual i exercici terapèutic per afavorir la recuperació i millorar la funcionalitat.",
       ],
     },
     forWhom: {
       es: [
-        "Puntos del gemelo, el cuádriceps o el glúteo que limitan correr o saltar",
-        "Dolor de espalda con banda muscular clara",
-        "Antebrazo y codo de quien entrena o trabaja con las manos",
-        "Cuando la terapia manual no llega al músculo que se queja",
+        "Personas con puntos de tensión muscular que generan dolor.",
+        "Cuando hace falta complementar la terapia manual con una técnica más específica para trabajar la musculatura.",
       ],
       ca: [
-        "Punts del bessó, el quàdriceps o el gluti que limiten córrer o saltar",
-        "Dolor d'esquena amb una banda muscular clara",
-        "Avantbraç i colze de qui entrena o treballa amb les mans",
-        "Quan la teràpia manual no arriba al múscul que es queixa",
+        "Persones amb punts de tensió musculars que generen dolor.",
+        "Quan es necessita complementar la teràpia manual amb una tècnica més específica per treballar la musculatura.",
       ],
-    },
-    note: {
-      es: "La aguja es intensa y corta. No se busca aguantar por aguantar, y no se pincha un día en el que no puedas permitirte la molestia posterior.",
-      ca: "L'agulla és intensa i curta. No es busca aguantar per aguantar, i no es punxa un dia en què no et puguis permetre la molèstia posterior.",
     },
     faq: {
       es: [
         {
-          q: "¿Duele mucho la punción seca?",
-          a: "El momento de la aguja es intenso y breve. Antes se explica qué vas a notar. Si el miedo manda, se elige otra herramienta.",
+          q: "¿Qué notaré durante la punción seca?",
+          a: "Puedes notar una pequeña sensación de presión o una respuesta muscular local durante la aplicación. La técnica se adapta a cada persona y a su tolerancia.",
         },
         {
-          q: "¿Queda marca?",
-          a: "A veces un hematoma pequeño. Se advierte en la visita. No es la norma en todas las zonas.",
+          q: "¿Qué notaré después del tratamiento?",
+          a: "Es posible notar una ligera sensibilidad o sensación de carga muscular durante las horas posteriores, que suele desaparecer en poco tiempo.",
         },
         {
-          q: "¿Puedo entrenar después de la punción?",
-          a: "Depende del tejido y de lo que se haya hecho. A veces toca bajar la carga ese día. Se dice antes de que salgas de Via Sèrgia.",
+          q: "¿Puedo entrenar después de la punción seca?",
+          a: "Sí. Se recomienda adaptar la intensidad del entrenamiento según la respuesta de la zona tratada.",
+        },
+        {
+          q: "¿Es lo mismo que la acupuntura?",
+          a: "No. Aunque utilizan elementos similares, la punción seca es una técnica de fisioterapia orientada al tratamiento de los puntos gatillo miofasciales.",
         },
       ],
       ca: [
         {
-          q: "Fa molt mal la punció seca?",
-          a: "El moment de l'agulla és intens i breu. Abans s'explica què notaràs. Si la por mana, s'escull una altra eina.",
+          q: "Què notaré durant la punció seca?",
+          a: "Pots notar una petita sensació de pressió o una resposta muscular local durant l'aplicació. La tècnica s'adapta a cada persona i a la seva tolerància.",
         },
         {
-          q: "Queda marca?",
-          a: "De vegades un hematoma petit. S'avisa a la visita. No és la norma a totes les zones.",
+          q: "Què notaré després del tractament?",
+          a: "És possible notar una lleugera sensibilitat o sensació de càrrega muscular durant les hores posteriors, que acostuma a desaparèixer en poc temps.",
         },
         {
-          q: "Puc entrenar després de la punció?",
-          a: "Depèn del teixit i del que s'hagi fet. De vegades toca baixar la càrrega aquell dia. Es diu abans que surtis de Via Sèrgia.",
+          q: "Puc entrenar després de la punció seca?",
+          a: "Sí. Es recomana adaptar la intensitat de l'entrenament segons la resposta de la zona tractada.",
+        },
+        {
+          q: "És el mateix que l'acupuntura?",
+          a: "No. Tot i que utilitzen elements similars, la punció seca és una tècnica de fisioteràpia orientada al tractament dels punts gallet miofascials.",
         },
       ],
     },
@@ -179,61 +178,72 @@ export const therapies: Therapy[] = [
     },
     paragraphs: {
       es: [
-        "La neuromodulación percutánea usa una aguja muy fina y una corriente suave, dosificada, para modular el dolor y la forma en la que el músculo se activa. No es pegar unos parches y marcharse: la corriente se dirige y se ajusta mientras se valora la respuesta.",
-        "Tiene sentido cuando el dolor se ha vuelto pesado, cuando un músculo no entra en el gesto —un hombro que no sube limpio, un cuádriceps que no empuja, un tendón que se queja al correr— o cuando la punción seca sola se queda corta.",
-        "La intensidad se decide en la visita, no con un protocolo sacado de internet. Si hay marcapasos, embarazo o una herida en la zona, se valora antes y, si no toca, no se hace.",
+        "La neuromodulación percutánea es una técnica de fisioterapia invasiva que utiliza estimulación eléctrica de baja intensidad para actuar sobre el sistema nervioso y modular la respuesta muscular y la percepción del dolor.",
+        "Es una técnica especialmente útil cuando hay alteraciones en la activación muscular, dificultades en determinados movimientos o molestias que afectan a la actividad física y deportiva.",
+        "La intensidad y los parámetros del tratamiento se adaptan a cada persona según la valoración y la respuesta.",
+        "Se puede combinar con terapia manual, punción seca y ejercicio terapéutico para conseguir un tratamiento más completo e individualizado.",
       ],
       ca: [
-        "La neuromodulació percutània fa servir una agulla molt fina i un corrent suau, dosificat, per modular el dolor i la manera com el múscul s'activa. No és enganxar uns pegats i marxar: el corrent es dirigeix i s'ajusta mentre es valora la resposta.",
-        "Té sentit quan el dolor s'ha fet pesat, quan un múscul no entra al gest —una espatlla que no puja neta, un quàdriceps que no empeny, un tendó que es queixa en córrer— o quan la punció seca sola es queda curta.",
-        "La intensitat es decideix a la visita, no amb un protocol tret d'internet. Si hi ha marcapassos, embaràs o una ferida a la zona, es valora abans i, si no toca, no es fa.",
+        "La neuromodulació percutània és una tècnica de fisioteràpia invasiva que utilitza estimulació elèctrica de baixa intensitat per actuar sobre el sistema nerviós i modular la resposta muscular i la percepció del dolor.",
+        "És una tècnica especialment útil quan hi ha alteracions en l'activació muscular, dificultats en determinats moviments o molèsties que afecten l'activitat física i esportiva.",
+        "La intensitat i els paràmetres del tractament s'adapten a cada persona segons la valoració i la resposta.",
+        "Es pot combinar amb teràpia manual, punció seca i exercici terapèutic per aconseguir un tractament més complet i individualitzat.",
       ],
     },
     forWhom: {
       es: [
-        "Dolor que ya dura y no cede solo con las manos",
-        "Un músculo que no se activa en el gesto del deporte",
-        "Tendón de hombro, rodilla o Aquiles que se queja al cargar",
-        "Como complemento de la punción seca, cuando hace falta",
+        "Dolor muscular y puntos gatillo.",
+        "Tendinopatías (hombro, rodilla, Aquiles, codo…).",
+        "Dolor cervical y lumbar.",
+        "Lesiones musculares y deportivas.",
+        "Dolor articular.",
+        "Alteraciones de la activación y el control muscular.",
+        "Dolor neuropático e irradiado.",
+        "Déficits de fuerza y control neuromuscular.",
       ],
       ca: [
-        "Dolor que ja dura i no cedeix només amb les mans",
-        "Un múscul que no s'activa en el gest de l'esport",
-        "Tendó d'espatlla, genoll o Aquil·les que es queixa en carregar",
-        "Com a complement de la punció seca, quan cal",
+        "Dolor muscular i punts gallet.",
+        "Tendinopaties (espatlla, genoll, Aquil·les, colze…).",
+        "Dolor cervical i lumbar.",
+        "Lesions musculars i esportives.",
+        "Dolor articular.",
+        "Alteracions de l'activació i el control muscular.",
+        "Dolor neuropàtic i irradiat.",
+        "Dèficits de força i control neuromuscular.",
       ],
     },
-    note: {
-      es: "La corriente se tiene que poder tolerar. Si deja de serlo, se baja o se para. No hay una frecuencia mágica que sirva para todo el mundo.",
-      ca: "El corrent s'ha de poder tolerar. Si deixa de ser-ho, es baixa o s'atura. No hi ha una freqüència màgica que serveixi per a tothom.",
+    asideTitle: { es: "¿Para qué patologías?", ca: "Per a quines patologies?" },
+    asideNote: {
+      es: "Importante: la neuromodulación percutánea no está indicada de forma general para todas estas patologías; hay que valorar cada caso y seleccionarla según los objetivos terapéuticos.",
+      ca: "Important: la neuromodulació percutània no està indicada de manera general per a totes aquestes patologies; cal valorar cada cas i seleccionar-la segons els objectius terapèutics.",
     },
     faq: {
       es: [
         {
           q: "¿Se nota la corriente?",
-          a: "Sí: una sensación rítmica y tolerable. Tú puedes decir que baje. La sesión no consiste en aguantar.",
+          a: "Sí. Puedes notar una sensación rítmica o pequeños impulsos musculares, siempre tolerables y adaptados a cada persona. La intensidad se regula durante toda la sesión.",
         },
         {
           q: "¿En qué se diferencia de la punción seca?",
-          a: "La punción busca el punto muscular. La neuromodulación añade un estímulo eléctrico para cambiar dolor y activación. A veces se combinan. A veces basta una de las dos.",
+          a: "La punción seca actúa principalmente sobre el tejido muscular mediante una aguja. La neuromodulación añade un estímulo eléctrico para trabajar sobre el sistema nervioso, el dolor y la activación muscular. Se pueden combinar según el caso.",
         },
         {
-          q: "¿Duele al día siguiente?",
-          a: "Puede haber sensación de haber trabajado la zona. No debería impedirte caminar ni dormir. Si pasa, se comenta en la siguiente visita en Mataró.",
+          q: "¿Cuántas sesiones necesitaré?",
+          a: "Depende de cada caso, del tipo de lesión y de la respuesta al tratamiento. Después de la valoración inicial, establecemos un plan de tratamiento individualizado según tus necesidades.",
         },
       ],
       ca: [
         {
           q: "Es nota el corrent?",
-          a: "Sí: una sensació rítmica i tolerable. Tu pots dir que baixi. La sessió no consisteix a aguantar.",
+          a: "Sí. Pots notar una sensació rítmica o petits impulsos musculars, sempre tolerables i adaptats a cada persona. La intensitat es regula durant tota la sessió.",
         },
         {
           q: "En què es diferencia de la punció seca?",
-          a: "La punció busca el punt muscular. La neuromodulació hi afegeix un estímul elèctric per canviar dolor i activació. De vegades es combinen. De vegades en basta una de les dues.",
+          a: "La punció seca actua principalment sobre el teixit muscular mitjançant una agulla. La neuromodulació afegeix un estímul elèctric per treballar sobre el sistema nerviós, el dolor i l'activació muscular. Es poden combinar segons el cas.",
         },
         {
-          q: "Fa mal l'endemà?",
-          a: "Pot haver-hi sensació d'haver treballat la zona. No t'hauria d'impedir caminar ni dormir. Si passa, es comenta a la visita següent a Mataró.",
+          q: "Quantes sessions necessitaré?",
+          a: "Depèn de cada cas, del tipus de lesió i de la resposta al tractament. Després de la valoració inicial, establim un pla de tractament individualitzat segons les teves necessitats.",
         },
       ],
     },
@@ -253,14 +263,16 @@ export const therapies: Therapy[] = [
     },
     paragraphs: {
       es: [
-        "El ejercicio terapéutico es la parte que hace que el alivio dure. Fuerza, control y exposición gradual a lo que te duele hacer: una sentadilla, una carrera, un press, un día largo de pie.",
-        "Pol también es entrenador personal en Oikos, así que el ejercicio no sale de una fotocopia genérica. Si ya entrenas en el box, el plan puede convivir con tu programación. Si no entrenas, no hace falta apuntarte a nada: se adapta a tu casa, tu tiempo y tu deporte, sea pádel, correr, nadar o ninguno.",
-        "La dosis importa más que la lista. Pocas cosas, bien elegidas, con un criterio de cuándo subir y cuándo parar. El objetivo es que sepas qué hacer el martes.",
+        "El ejercicio terapéutico es una parte fundamental del proceso de recuperación. Mediante el trabajo de fuerza, control y movilidad, buscamos recuperar la funcionalidad, mejorar la capacidad física y volver progresivamente a las actividades que te generan molestias.",
+        "Cada programa de ejercicios se adapta a las necesidades y objetivos de cada persona. Tanto si practicas deporte como si no, los ejercicios se planifican teniendo en cuenta tu nivel físico, tus actividades y tu día a día.",
+        "El objetivo no es solo aliviar el dolor, sino conseguir una mejora duradera, recuperar la confianza en el movimiento y prevenir posibles recaídas.",
+        "No hace falta tener experiencia deportiva ni entrenar en un centro concreto. El ejercicio se adapta a ti, a tu ritmo y a tus necesidades.",
       ],
       ca: [
-        "L'exercici terapèutic és la part que fa que l'alleujament duri. Força, control i exposició gradual al que et fa mal fer: una esquat, una cursa, un press, un dia llarg dret.",
-        "Pol també és entrenador personal a Oikos, així que l'exercici no surt d'una fotocòpia genèrica. Si ja entrenes al box, el pla pot conviure amb la teva programació. Si no entrenes, no cal apuntar-te a res: s'adapta a casa teva, al teu temps i al teu esport, sigui pàdel, córrer, nedar o cap.",
-        "La dosi importa més que la llista. Poques coses, ben triades, amb un criteri de quan pujar i quan parar. L'objectiu és que sàpigues què fer dimarts.",
+        "L'exercici terapèutic és una part fonamental del procés de recuperació. Mitjançant el treball de força, control i mobilitat, busquem recuperar la funcionalitat, millorar la capacitat física i tornar progressivament a les activitats que et generen molèsties.",
+        "Cada programa d'exercicis s'adapta a les necessitats i objectius de cada persona. Tant si practiques esport com si no, els exercicis es planifiquen tenint en compte el teu nivell físic, les teves activitats i el teu dia a dia.",
+        "L'objectiu no és només alleujar el dolor, sinó aconseguir una millora duradora, recuperar la confiança en el moviment i prevenir possibles recaigudes.",
+        "No cal tenir experiència esportiva ni entrenar en cap centre específic. L'exercici s'adapta a tu, al teu ritme i a les teves necessitats.",
       ],
     },
     forWhom: {
@@ -277,37 +289,33 @@ export const therapies: Therapy[] = [
         "Després de teràpia manual, punció o neuromodulació",
       ],
     },
-    note: {
-      es: "No hace falta ser socio de Oikos. El centro es el lugar de la consulta, no un requisito para tratarte.",
-      ca: "No cal ser soci d'Oikos. El centre és el lloc de la consulta, no un requisit per tractar-te.",
-    },
     faq: {
       es: [
         {
           q: "¿Tengo que ir al gimnasio?",
-          a: "No. Si tienes uno, se usa. Si no, se busca una versión que quepa en tu semana y en tu casa.",
+          a: "No. Los ejercicios se adaptan a tus recursos y necesidades. Si entrenas en un gimnasio, podemos aprovecharlo; si no, preparamos un programa que puedas hacer en casa y adaptar a tu día a día.",
         },
         {
-          q: "¿Puedo seguir yendo a clase?",
-          a: "Casi siempre sí, con ajustes. Parar del todo solo cuando cargar empeora la lesión de forma clara.",
+          q: "¿Puedo seguir entrenando?",
+          a: "En la mayoría de los casos, sí. Adaptamos los ejercicios y las cargas según cada situación para poder mantener la actividad física sin comprometer la recuperación.",
         },
         {
-          q: "¿Esto sustituye a la camilla?",
-          a: "No siempre. A veces primero hay que bajar el dolor para poder cargar. El ejercicio es lo que consolida el cambio.",
+          q: "¿El ejercicio terapéutico sustituye el tratamiento en el box?",
+          a: "No siempre. En algunos casos, el tratamiento manual ayuda a reducir el dolor y facilita el movimiento. El ejercicio terapéutico permite consolidar la recuperación y mejorar la funcionalidad a largo plazo.",
         },
       ],
       ca: [
         {
           q: "He d'anar al gimnàs?",
-          a: "No. Si en tens un, es fa servir. Si no, es busca una versió que cap a la teva setmana i a casa teva.",
+          a: "No. Els exercicis s'adapten als teus recursos i necessitats. Si entrenes en un gimnàs, podem aprofitar-lo; si no, preparem un programa que puguis fer a casa i adaptar al teu dia a dia.",
         },
         {
-          q: "Puc seguir anant a classe?",
-          a: "Gairebé sempre sí, amb ajustos. Parar del tot només quan carregar empitjora la lesió de manera clara.",
+          q: "Puc seguir entrenant?",
+          a: "En la majoria dels casos, sí. Adaptem els exercicis i les càrregues segons cada situació per poder mantenir l'activitat física sense comprometre la recuperació.",
         },
         {
-          q: "Això substitueix la llitera?",
-          a: "No sempre. De vegades primer cal baixar el dolor per poder carregar. L'exercici és el que consolida el canvi.",
+          q: "L'exercici terapèutic substitueix el tractament dins del box?",
+          a: "No sempre. En alguns casos, el tractament manual ajuda a reduir el dolor i facilita el moviment. L'exercici terapèutic permet consolidar la recuperació i millorar la funcionalitat a llarg termini.",
         },
       ],
     },
@@ -327,61 +335,67 @@ export const therapies: Therapy[] = [
     },
     paragraphs: {
       es: [
-        "La readaptación deportiva es el puente entre «ya no me duele en la camilla» y «he vuelto a mi deporte». Pol la plantea para quien hace crosstraining, corre, juega a pádel o a un deporte de equipo y no quiere reaparecer el mismo día a la misma carga de antes.",
-        "No va por calendario. Va por criterios: movimiento sin miedo, fuerza suficiente, el gesto del deporte tolerado y, entonces, la vuelta al grupo. Cada fase se explica con lo que puedes hacer y lo que todavía no.",
-        "La consulta está dentro de un centro de entrenamiento. El final del proceso no es un alta en un papel: es que la carga del box, de la pista o de la carretera vuelva a ser tuya.",
+        "La readaptación deportiva es el puente entre superar una lesión y recuperar la capacidad de hacer vida normal y volver a practicar tu deporte con confianza y seguridad.",
+        "Está pensada tanto para personas que quieren recuperar las actividades de su día a día como para quienes practican crosstraining, running, pádel u otros deportes y quieren volver a entrenar sin precipitarse.",
+        "El trabajo se basa en una progresión individualizada, adaptando los ejercicios y las cargas a cada persona. Buscamos recuperar la fuerza, la movilidad, la coordinación y la capacidad de movimiento necesarias para volver a las actividades habituales o deportivas con garantías.",
+        "Cada fase se adapta a tu evolución, aumentando la exigencia hasta recuperar las actividades habituales, los entrenamientos o la competición.",
+        "La consulta está ubicada dentro de un centro de entrenamiento, lo que permite trabajar con ejercicios y movimientos adaptados a las necesidades de cada persona.",
+        "El objetivo no es simplemente superar una lesión, sino recuperar la confianza, la funcionalidad y la capacidad de volver a hacer lo que te gusta.",
       ],
       ca: [
-        "La readaptació esportiva és el pont entre «ja no em fa mal a la llitera» i «he tornat al meu esport». Pol la planteja per a qui fa crosstraining, corre, juga a pàdel o a un esport d'equip i no vol reaparèixer el mateix dia a la mateixa càrrega d'abans.",
-        "No va per calendari. Va per criteris: moviment sense por, força suficient, el gest de l'esport tolerat i, aleshores, la tornada al grup. Cada fase s'explica amb el que pots fer i el que encara no.",
-        "La consulta és dins d'un centre d'entrenament. El final del procés no és una alta en un paper: és que la càrrega del box, de la pista o de la carretera torni a ser teva.",
+        "La readaptació esportiva és el pont entre superar una lesió i recuperar la capacitat de fer vida normal i tornar a practicar el teu esport amb confiança i seguretat.",
+        "Està pensada tant per a persones que volen recuperar les activitats del seu dia a dia com per a aquelles que practiquen crosstraining, running, pàdel o altres esports i volen tornar a entrenar sense precipitar-se.",
+        "El treball es basa en una progressió individualitzada, adaptant els exercicis i les càrregues a cada persona. Busquem recuperar la força, la mobilitat, la coordinació i la capacitat de moviment necessàries per tornar a les activitats habituals o esportives amb garanties.",
+        "Cada fase s'adapta a la teva evolució, augmentant l'exigència fins a recuperar les activitats habituals, els entrenaments o la competició.",
+        "La consulta està ubicada dins d'un centre d'entrenament, fet que permet treballar amb exercicis i moviments adaptats a les necessitats de cada persona.",
+        "L'objectiu no és simplement superar una lesió, sinó recuperar la confiança, la funcionalitat i la capacitat de tornar a fer allò que t'agrada.",
       ],
     },
     forWhom: {
       es: [
-        "Vuelta al crosstraining después de una lesión",
-        "Corredores que recaen cada vez que suben kilómetros",
-        "Pádel, fútbol u otro deporte de equipo con un gesto que aún no tolera",
-        "Quien ya hizo terapia y necesita el tramo final, el de la carga",
+        "Personas que quieren volver al crosstraining después de una lesión.",
+        "Deportistas que quieren recuperar progresivamente su nivel físico después de una lesión.",
+        "Personas que tienen recaídas cuando aumentan la intensidad o la carga de entrenamiento.",
+        "Personas que todavía no toleran determinados movimientos o gestos deportivos.",
+        "Personas que ya han hecho tratamiento de fisioterapia y necesitan completar la recuperación con un trabajo progresivo de fuerza y carga.",
+        "Personas que quieren recuperar su capacidad física y volver a las actividades habituales con confianza.",
       ],
       ca: [
-        "Tornada al crosstraining després d'una lesió",
-        "Corredors que recauen cada cop que pugen quilòmetres",
-        "Pàdel, futbol o un altre esport d'equip amb un gest que encara no tolera",
-        "Qui ja ha fet teràpia i necessita el tram final, el de la càrrega",
+        "Persones que volen tornar al crosstraining després d'una lesió.",
+        "Esportistes que volen recuperar progressivament el seu nivell físic després d'una lesió.",
+        "Persones que tenen recaigudes quan augmenten la intensitat o la càrrega d'entrenament.",
+        "Persones que encara no toleren determinats moviments o gestos esportius.",
+        "Persones que ja han fet tractament de fisioteràpia i necessiten completar la recuperació amb un treball progressiu de força i càrrega.",
+        "Persones que volen recuperar la seva capacitat física i tornar a les activitats habituals amb confiança.",
       ],
-    },
-    note: {
-      es: "Volver del tirón es la forma habitual de recaer. La readaptación existe para subir la carga con un orden, no para prometer una fecha.",
-      ca: "Tornar de cop és la forma habitual de recaure. La readaptació existeix per pujar la càrrega amb un ordre, no per prometre una data.",
     },
     faq: {
       es: [
         {
           q: "¿Cuánto dura una readaptación?",
-          a: "Lo marca la lesión y tu punto de partida, no un paquete cerrado. Una molestia de hace una semana no se parece a un tendón de meses.",
+          a: "Depende del tipo de lesión, de su evolución y del punto de partida de cada persona. No hay un tiempo establecido, ya que cada proceso de recuperación es diferente.",
         },
         {
-          q: "¿Sirve si mi deporte no es crosstraining?",
-          a: "Sí. El crosstraining es un idioma que Pol habla, no un requisito. Correr, pádel o un deporte de equipo también tienen su vuelta.",
+          q: "¿Necesito hacer deporte para empezar una readaptación?",
+          a: "No. La readaptación no es exclusiva de los deportistas. También está indicada para personas que quieren recuperar la fuerza, la movilidad y la funcionalidad para volver a hacer las actividades de su día a día.",
         },
         {
-          q: "¿Puedo lesionarme si vuelvo antes?",
-          a: "Puedes recaer si la carga sube más rápido de lo que el tejido tolera. Por eso se pactan criterios, no una fecha bonita.",
+          q: "¿Me puedo lesionar si vuelvo antes de hora?",
+          a: "Sí, volver a aumentar la carga demasiado rápido puede favorecer una recaída. Por eso, la progresión se basa en criterios físicos y funcionales, no únicamente en el tiempo transcurrido.",
         },
       ],
       ca: [
         {
           q: "Quant dura una readaptació?",
-          a: "Ho marca la lesió i el teu punt de partida, no un paquet tancat. Una molèstia de fa una setmana no s'assembla a un tendó de mesos.",
+          a: "Depèn del tipus de lesió, de la seva evolució i del punt de partida de cada persona. No hi ha un temps establert, ja que cada procés de recuperació és diferent.",
         },
         {
-          q: "Serveix si el meu esport no és crosstraining?",
-          a: "Sí. El crosstraining és un idioma que Pol parla, no un requisit. Córrer, pàdel o un esport d'equip també tenen la seva tornada.",
+          q: "Necessito fer esport per començar una readaptació?",
+          a: "No. La readaptació no és exclusiva dels esportistes. També està indicada per a persones que volen recuperar la força, la mobilitat i la funcionalitat per tornar a fer les activitats del seu dia a dia.",
         },
         {
-          q: "Em puc lesionar si torno abans?",
-          a: "Pots recaure si la càrrega puja més ràpid del que el teixit tolera. Per això es pacten criteris, no una data bonica.",
+          q: "Em puc lesionar si torno abans d'hora?",
+          a: "Sí, tornar a augmentar la càrrega massa ràpid pot afavorir una recaiguda. Per això, la progressió es basa en criteris físics i funcionals, no únicament en el temps transcorregut.",
         },
       ],
     },
